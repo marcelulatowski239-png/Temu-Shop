@@ -1,85 +1,165 @@
-const { EmbedBuilder } = require("discord.js");
+const {
+    EmbedBuilder,
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    ComponentType
+} = require('discord.js');
 
 module.exports = {
-  name: "help",
-  description: "Panel pomocy bota",
+    name: 'help',
+    description: 'Interaktywny panel pomocy TemuShop',
 
-  async execute(message, args, client) {
-    const embed = new EmbedBuilder()
-      .setColor("#5865F2")
-      .setAuthor({
-        name: "TemuShop • Panel Pomocy",
-        iconURL: client.user.displayAvatarURL()
-      })
-      .setThumbnail(client.user.displayAvatarURL())
-      .setDescription(
-        `📖 **Wszystkie Komendy Bota**\n\n` +
-        `Witaj ${message.author} 👋\n` +
-        `Oto lista wszystkich dostępnych komend na serwerze.\n\n` +
-        `**Prefix:** \`!\``
-      )
-      .addFields(
-        {
-          name: "👤 Komendy użytkownika",
-          value:
-            "`!profil` — Pokazuje profil użytkownika\n" +
-            "`!rep @user` — System reputacji\n" +
-            "`!level` — Pokazuje poziom XP",
-          inline: false,
-        },
-        {
-          name: "🛠️ System serwera",
-          value:
-            "`!verify` — Weryfikacja użytkownika\n" +
-            "`!ticket` — Tworzenie ticketa\n" +
-            "`!rank` — Twój poziom\n" +
-            "`!top` — Ranking leveli",
-          inline: false,
-        },
-        {
-          name: "🎉 Eventy i społeczność",
-          value:
-            "`!giveaway` — Tworzy giveaway\n" +
-            "`!glosowanie` — Tworzy głosowanie\n" +
-            "`!rep @user produkt cena metoda` — Opinie",
-          inline: false,
-        },
-        {
-          name: "🛡️ Moderacja",
-          value:
-            "`!kick @user` — Wyrzuca użytkownika\n" +
-            "`!ban @user` — Banuje użytkownika\n" +
-            "`!unban ID` — Odbanowuje\n" +
-            "`!mute @user 10m` — Wycisza\n" +
-            "`!unmute @user` — Odcisza\n" +
-            "`!warn @user powód` — Ostrzeżenie\n" +
-            "`!clear 10` — Czyści wiadomości",
-          inline: false,
-        },
-        {
-          name: "⚙️ Administracja",
-          value:
-            "`!ustawwelcome #kanał`\n" +
-            "`!ustawleave #kanał`\n" +
-            "`!ustawboost #kanał`\n" +
-            "`!reset` — Restart bota",
-          inline: false,
-        },
-        {
-          name: "🤖 Informacje o bocie",
-          value:
-            `Nazwa: **${client.user.username}**\n` +
-            `ID: \`${client.user.id}\`\n` +
-            `Serwery: **${client.guilds.cache.size}**`,
-          inline: false,
-        }
-      )
-      .setFooter({
-        text: `Wywołane przez ${message.author.tag}`,
-        iconURL: message.author.displayAvatarURL()
-      })
-      .setTimestamp();
+    async execute(message) {
 
-    await message.reply({ embeds: [embed] });
-  },
+        const mainEmbed = new EmbedBuilder()
+            .setColor('#ff7a00')
+            .setTitle('🛍️ TemuShop • Panel Pomocy')
+            .setDescription(
+                `Witaj ${message.author} 👋\n\n` +
+                `Wybierz kategorię z menu poniżej, aby zobaczyć komendy.\n\n` +
+                `⚡ Prefix: \`!\``
+            )
+            .setFooter({ text: 'TemuShop © 2026' })
+            .setTimestamp();
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('temushop-help')
+            .setPlaceholder('🛒 Wybierz kategorię...')
+            .addOptions([
+                {
+                    label: 'Komendy Klienta',
+                    description: 'Profil, level, reputacja',
+                    value: 'user',
+                    emoji: '👤'
+                },
+                {
+                    label: 'System Sklepu',
+                    description: 'Verify, ticket, opinie',
+                    value: 'shop',
+                    emoji: '🛒'
+                },
+                {
+                    label: 'Eventy',
+                    description: 'Giveaway i głosowania',
+                    value: 'event',
+                    emoji: '🎉'
+                },
+                {
+                    label: 'Moderacja',
+                    description: 'Komendy moderatorskie',
+                    value: 'mod',
+                    emoji: '🛡'
+                },
+                {
+                    label: 'Administracja',
+                    description: 'Ustawienia bota',
+                    value: 'admin',
+                    emoji: '⚙'
+                }
+            ]);
+
+        const row = new ActionRowBuilder().addComponents(menu);
+
+        const msg = await message.reply({
+            embeds: [mainEmbed],
+            components: [row]
+        });
+
+        const collector = msg.createMessageComponentCollector({
+            componentType: ComponentType.StringSelect,
+            time: 60000
+        });
+
+        collector.on('collect', async interaction => {
+
+            if (interaction.user.id !== message.author.id) {
+                return interaction.reply({
+                    content: '❌ To menu nie jest dla Ciebie.',
+                    ephemeral: true
+                });
+            }
+
+            let embed;
+
+            switch (interaction.values[0]) {
+
+                case 'user':
+                    embed = new EmbedBuilder()
+                        .setColor('#ff7a00')
+                        .setTitle('👤 Komendy Klienta')
+                        .setDescription(
+                            '```' +
+                            '!profil\n' +
+                            '!rep @user\n' +
+                            '!level\n' +
+                            '!rank\n' +
+                            '!top' +
+                            '```'
+                        );
+                    break;
+
+                case 'shop':
+                    embed = new EmbedBuilder()
+                        .setColor('#ff7a00')
+                        .setTitle('🛒 System Sklepu')
+                        .setDescription(
+                            '```' +
+                            '!verify\n' +
+                            '!ticket\n' +
+                            '!rep @user produkt cena metoda' +
+                            '```'
+                        );
+                    break;
+
+                case 'event':
+                    embed = new EmbedBuilder()
+                        .setColor('#ff7a00')
+                        .setTitle('🎉 Eventy')
+                        .setDescription(
+                            '```' +
+                            '!giveaway\n' +
+                            '!glosowanie' +
+                            '```'
+                        );
+                    break;
+
+                case 'mod':
+                    embed = new EmbedBuilder()
+                        .setColor('#ff7a00')
+                        .setTitle('🛡 Moderacja')
+                        .setDescription(
+                            '```' +
+                            '!kick @user\n' +
+                            '!ban @user\n' +
+                            '!unban ID\n' +
+                            '!mute @user 10m\n' +
+                            '!unmute @user\n' +
+                            '!warn @user powod\n' +
+                            '!clear 10' +
+                            '```'
+                        );
+                    break;
+
+                case 'admin':
+                    embed = new EmbedBuilder()
+                        .setColor('#ff7a00')
+                        .setTitle('⚙ Administracja')
+                        .setDescription(
+                            '```' +
+                            '!ustawwelcome #kanal\n' +
+                            '!ustawleave #kanal\n' +
+                            '!ustawboost #kanal\n' +
+                            '!reset' +
+                            '```'
+                        );
+                    break;
+            }
+
+            await interaction.update({ embeds: [embed] });
+        });
+
+        collector.on('end', () => {
+            msg.edit({ components: [] });
+        });
+    }
 };
