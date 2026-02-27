@@ -4,14 +4,13 @@ module.exports = (client) => {
 
     const userMessages = new Map();
 
-    const MESSAGE_LIMIT = 5; // ile wiadomości
-    const TIME_LIMIT = 5000; // czas w ms (5 sekund)
-    const MUTE_TIME = 10 * 60 * 1000; // 10 minut
+    const MESSAGE_LIMIT = 5;
+    const TIME_LIMIT = 5000; // 5 sekund
+    const MUTE_TIME = 10 * 60 * 1000;
 
     client.on("messageCreate", async (message) => {
         if (!message.guild) return;
         if (message.author.bot) return;
-
         if (message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
 
         const userId = message.author.id;
@@ -25,25 +24,21 @@ module.exports = (client) => {
 
         timestamps.push(now);
 
-        // usuwamy stare wiadomości spoza limitu czasu
-        const filtered = timestamps.filter(time => now - time < TIME_LIMIT);
-        userMessages.set(userId, filtered);
+        // filtrujemy stare wiadomości
+        const recentMessages = timestamps.filter(time => now - time <= TIME_LIMIT);
+        userMessages.set(userId, recentMessages);
 
-        if (filtered.length >= MESSAGE_LIMIT) {
+        if (recentMessages.length >= MESSAGE_LIMIT) {
 
             userMessages.delete(userId);
 
             try {
-                // usuń ostatnie wiadomości użytkownika
-                const messages = await message.channel.messages.fetch({ limit: 20 });
-                const userSpam = messages.filter(m => m.author.id === userId);
+                await message.member.timeout(MUTE_TIME, "Spam (5 wiadomości w 5 sekund)");
 
-                await message.channel.bulkDelete(userSpam, true);
-
-                await message.member.timeout(MUTE_TIME, "Spamowanie (AntiSpam)");
+                await message.channel.bulkDelete(5, true);
 
                 message.channel.send(
-                    `🔇 ${message.author} został wyciszony na 10 minut za spam.`
+                    `🔇 ${message.author} został wyciszony za spam (10 minut).`
                 );
 
             } catch (err) {
