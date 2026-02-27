@@ -392,4 +392,4 @@ client.on("messageCreate", async (message) => {
   if (command === "help") {
     return help.execute(message, args, client);
   }
-});2
+});
