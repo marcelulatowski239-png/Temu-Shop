@@ -11,34 +11,22 @@ module.exports = (client) => {
             await message.guild.members.fetch();
             const members = message.guild.members.cache;
 
+            const users = members.filter(m => !m.user.bot).size;
             const bots = members.filter(m => m.user.bot).size;
-
-            const online = members.filter(m =>
-                !m.user.bot &&
-                (m.presence?.status === "online" ||
-                 m.presence?.status === "idle" ||
-                 m.presence?.status === "dnd")
-            ).size;
-
-            const offline = members.filter(m =>
-                !m.user.bot &&
-                (!m.presence || m.presence.status === "offline")
-            ).size;
-
-            const total = members.filter(m => !m.user.bot).size;
+            const total = message.guild.memberCount;
 
             const embed = new EmbedBuilder()
-                .setColor("#2B2D31")
+                .setColor("#5865F2")
                 .setAuthor({
                     name: message.guild.name,
                     iconURL: message.guild.iconURL({ dynamic: true })
                 })
                 .setTitle("📊 Statystyki Serwera")
+                .setDescription("Aktualne dane członków serwera")
                 .addFields(
-                    { name: "👥 Użytkownicy", value: `\`${total}\``, inline: true },
-                    { name: "🟢 Online", value: `\`${online}\``, inline: true },
-                    { name: "⚫ Offline", value: `\`${offline}\``, inline: true },
-                    { name: "🤖 Boty", value: `\`${bots}\``, inline: true }
+                    { name: "👥 Użytkownicy", value: `\`${users}\``, inline: true },
+                    { name: "🤖 Boty", value: `\`${bots}\``, inline: true },
+                    { name: "📈 Razem", value: `\`${total}\``, inline: true }
                 )
                 .setFooter({
                     text: `Wywołane przez ${message.author.tag}`,
