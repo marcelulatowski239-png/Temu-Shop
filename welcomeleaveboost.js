@@ -1,10 +1,10 @@
 const { EmbedBuilder } = require("discord.js");
 
 const config = {
-  welcomeChannelId: "ID_KANALU_WELCOME",
-  leaveChannelId: "ID_KANALU_LEAVE",
-  boostChannelId: "ID_KANALU_BOOST",
-  boostRoleId: "ID_ROLI_BOOST",
+  welcomeChannelId: "1472956273854255337",
+  leaveChannelId: "1473339248739356837",
+  boostChannelId: "1473344129936130180",
+  boostRoleId: "1477026309543694336",
 };
 
 module.exports = (client) => {
