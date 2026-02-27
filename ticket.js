@@ -91,9 +91,17 @@ module.exports = (client) => {
             ],
         });
 
-        await channel.send({
-            content: `🎫 Ticket utworzony przez ${interaction.user}\nRodzaj: **${ticketType}**`
-        });
+ const closeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+        .setCustomId("close_ticket")
+        .setLabel("🔒 Zamknij ticket")
+        .setStyle(ButtonStyle.Danger)
+);
+
+await channel.send({
+    content: `🎫 Ticket utworzony przez ${interaction.user}\nRodzaj: **${ticketType}**`,
+    components: [closeRow]
+});
 
         await interaction.editReply({
             content: `✅ Ticket został utworzony: ${channel}`
