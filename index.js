@@ -2,6 +2,8 @@ const help = require("./help");
 
 const logs = require("./logs"); 
 
+const welcomeleaveboost = require("./welcomeleaveboost");
+
 const profil = require("./profil");
 
 const levels = require("./level");
@@ -27,6 +29,7 @@ const client = new Client({
   ]
 });
 
+welcomeleaveboost(client);
 logs(client);
 profil(client);
 glosowanie(client);
