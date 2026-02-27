@@ -4,6 +4,8 @@ const logs = require("./logs");
 
 const welcomeleaveboost = require("./welcomeleaveboost");
 
+const voiceStats = require("./voiceStats");
+
 const profil = require("./profil");
 
 const stats = require("./stats");
@@ -31,6 +33,7 @@ const client = new Client({
   ]
 });
 
+voiceStats(client);
 stats(client);
 welcomeleaveboost(client);
 logs(client);
