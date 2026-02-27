@@ -1,43 +1,53 @@
-const { 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ChannelType, 
-    PermissionsBitField 
+const {
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ChannelType,
+    PermissionsBitField
 } = require("discord.js");
 
 module.exports = (client) => {
 
-    // KOMENDA DO WYSŁANIA PANELU
+    // PANEL TICKETÓW
     client.on("messageCreate", async (message) => {
         if (message.author.bot) return;
-        if (message.content !== "!tickety") return;
+        if (!message.content.startsWith("!tickety")) return;
 
         const embed = new EmbedBuilder()
-            .setTitle("🎫 System Ticketów")
-            .setDescription("Wybierz rodzaj ticketa poniżej:")
+            .setTitle("📁 System Ticketów")
+            .setDescription("Wybierz rodzaj ticketa:")
+            .addFields(
+                { name: "🛒 Zakup", value: "Pomoc w zakupie", inline: true },
+                { name: "💰 Skup", value: "Sprzedaż przedmiotów", inline: true },
+                { name: "🆘 Pomoc", value: "Ogólna pomoc", inline: true },
+                { name: "🔒 MM", value: "Middleman", inline: true }
+            )
             .setColor("Blue");
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("ticket_zakup")
-                .setLabel("🛒 Zakup")
+                .setLabel("Zakup")
+                .setEmoji("🛒")
                 .setStyle(ButtonStyle.Success),
 
             new ButtonBuilder()
                 .setCustomId("ticket_skup")
-                .setLabel("💰 Skup")
+                .setLabel("Skup")
+                .setEmoji("💰")
                 .setStyle(ButtonStyle.Primary),
 
             new ButtonBuilder()
                 .setCustomId("ticket_pomoc")
-                .setLabel("🆘 Pomoc")
+                .setLabel("Pomoc")
+                .setEmoji("🆘")
                 .setStyle(ButtonStyle.Secondary),
 
             new ButtonBuilder()
                 .setCustomId("ticket_mm")
-                .setLabel("🔒 MM")
+                .setLabel("MM")
+                .setEmoji("🔒")
                 .setStyle(ButtonStyle.Danger)
         );
 
@@ -48,8 +58,6 @@ module.exports = (client) => {
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
 
-        await interaction.deferReply({ ephemeral: true });
-
         const types = {
             ticket_zakup: "zakup",
             ticket_skup: "skup",
@@ -58,6 +66,9 @@ module.exports = (client) => {
         };
 
         if (!types[interaction.customId]) return;
+
+        // 🔥 TO NAPRAWIA BŁĄD 3 SEKUND
+        await interaction.deferReply({ ephemeral: true });
 
         const ticketType = types[interaction.customId];
 
@@ -85,7 +96,7 @@ module.exports = (client) => {
         });
 
         await interaction.editReply({
-            content: `✅ Twój ticket został utworzony: ${channel}`
+            content: `✅ Ticket został utworzony: ${channel}`
         });
     });
 
