@@ -5,7 +5,7 @@ module.exports = (client) => {
     const userMessages = new Map();
 
     const MESSAGE_LIMIT = 5;
-    const TIME_LIMIT = 5000; // 5 sekund
+    const TIME_LIMIT = 10000; // 10 sekund
     const MUTE_TIME = 10 * 60 * 1000;
 
     client.on("messageCreate", async (message) => {
