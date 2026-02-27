@@ -8,6 +8,8 @@ const voiceStats = require("./voiceStats");
 
 const antilink = require("./antilink");
 
+const antispam = require("./antispam");
+
 const profil = require("./profil");
 
 const stats = require("./stats");
@@ -35,6 +37,7 @@ const client = new Client({
   ]
 });
 
+antispam(client);
 antilink(client);
 voiceStats(client);
 stats(client);
