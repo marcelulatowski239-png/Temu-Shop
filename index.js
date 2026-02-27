@@ -1,5 +1,7 @@
 const help = require("./help");
 
+const logs = require("./logs"); 
+
 const profil = require("./profil");
 
 const levels = require("./level");
@@ -25,6 +27,7 @@ const client = new Client({
   ]
 });
 
+logs(client);
 profil(client);
 glosowanie(client);
 rep(client);
