@@ -9,52 +9,45 @@ const {
 
 module.exports = (client) => {
 
-    // PANEL TICKETÓW
+    const OWNER_ID = "1472956273854255331";
+    const CATEGORY_ID = "1475471754221850857";
+
+    // PANEL
     client.on("messageCreate", async (message) => {
         if (message.author.bot) return;
-        if (!message.content.startsWith("!tickety")) return;
+        if (message.content !== "!tickety") return;
 
         const embed = new EmbedBuilder()
-            .setTitle("📁 System Ticketów")
-            .setDescription("Wybierz rodzaj ticketa:")
-            .addFields(
-                { name: "🛒 Zakup", value: "Pomoc w zakupie", inline: true },
-                { name: "💰 Skup", value: "Sprzedaż przedmiotów", inline: true },
-                { name: "🆘 Pomoc", value: "Ogólna pomoc", inline: true },
-                { name: "🔒 MM", value: "Middleman", inline: true }
-            )
-            .setColor("Blue");
+            .setTitle("🎫 System Ticketów")
+            .setDescription("Wybierz kategorię aby otworzyć ticket.")
+            .setColor("#5865F2");
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("ticket_zakup")
-                .setLabel("Zakup")
-                .setEmoji("🛒")
+                .setLabel("🛒 Zakup")
                 .setStyle(ButtonStyle.Success),
 
             new ButtonBuilder()
                 .setCustomId("ticket_skup")
-                .setLabel("Skup")
-                .setEmoji("💰")
+                .setLabel("💰 Skup")
                 .setStyle(ButtonStyle.Primary),
 
             new ButtonBuilder()
                 .setCustomId("ticket_pomoc")
-                .setLabel("Pomoc")
-                .setEmoji("🆘")
+                .setLabel("🆘 Pomoc")
                 .setStyle(ButtonStyle.Secondary),
 
             new ButtonBuilder()
                 .setCustomId("ticket_mm")
-                .setLabel("MM")
-                .setEmoji("🔒")
+                .setLabel("🔒 MM")
                 .setStyle(ButtonStyle.Danger)
         );
 
         message.channel.send({ embeds: [embed], components: [row] });
     });
 
-    // OBSŁUGA PRZYCISKÓW
+    // INTERACTION
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
 
@@ -65,9 +58,24 @@ module.exports = (client) => {
             ticket_mm: "mm"
         };
 
+        // ZAMYKANIE
+        if (interaction.customId === "close_ticket") {
+
+            await interaction.deferReply({ ephemeral: true });
+
+            await interaction.editReply({
+                content: "🔒 Ticket zamyka się za 5 sekund..."
+            });
+
+            setTimeout(() => {
+                interaction.channel.delete().catch(() => {});
+            }, 5000);
+
+            return;
+        }
+
         if (!types[interaction.customId]) return;
 
-        // 🔥 TO NAPRAWIA BŁĄD 3 SEKUND
         await interaction.deferReply({ ephemeral: true });
 
         const ticketType = types[interaction.customId];
@@ -75,6 +83,7 @@ module.exports = (client) => {
         const channel = await interaction.guild.channels.create({
             name: `ticket-${ticketType}-${interaction.user.username}`,
             type: ChannelType.GuildText,
+            parent: CATEGORY_ID, // 👈 PRZYPISANIE DO KATEGORII
             permissionOverwrites: [
                 {
                     id: interaction.guild.roles.everyone,
@@ -88,23 +97,37 @@ module.exports = (client) => {
                         PermissionsBitField.Flags.ReadMessageHistory
                     ],
                 },
+                {
+                    id: OWNER_ID,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages,
+                        PermissionsBitField.Flags.ReadMessageHistory
+                    ],
+                },
             ],
         });
 
- const closeRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-        .setCustomId("close_ticket")
-        .setLabel("🔒 Zamknij ticket")
-        .setStyle(ButtonStyle.Danger)
-);
+        const closeRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("close_ticket")
+                .setLabel("🔒 Zamknij ticket")
+                .setStyle(ButtonStyle.Danger)
+        );
 
-await channel.send({
-    content: `🎫 Ticket utworzony przez ${interaction.user}\nRodzaj: **${ticketType}**`,
-    components: [closeRow]
-});
+        const ticketEmbed = new EmbedBuilder()
+            .setTitle("📩 Nowy Ticket")
+            .setDescription(`Witaj ${interaction.user}\n\nTyp: **${ticketType}**\nOpisz swój problem.`)
+            .setColor("#2f3136");
+
+        await channel.send({
+            content: `<@${interaction.user.id}> <@${OWNER_ID}>`,
+            embeds: [ticketEmbed],
+            components: [closeRow]
+        });
 
         await interaction.editReply({
-            content: `✅ Ticket został utworzony: ${channel}`
+            content: `✅ Ticket utworzony w kategorii! ${channel}`
         });
     });
 
