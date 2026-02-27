@@ -6,6 +6,8 @@ const welcomeleaveboost = require("./welcomeleaveboost");
 
 const voiceStats = require("./voiceStats");
 
+const antilink = require("./antilink");
+
 const profil = require("./profil");
 
 const stats = require("./stats");
@@ -33,6 +35,7 @@ const client = new Client({
   ]
 });
 
+antilink(client);
 voiceStats(client);
 stats(client);
 welcomeleaveboost(client);
