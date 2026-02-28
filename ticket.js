@@ -10,9 +10,11 @@ const {
     TextInputStyle
 } = require("discord.js");
 
-const { prefix, ticketCategoryId, staffRoleId, logChannelId } = require("./config");
+const config = require("./config");
 
 module.exports = (client) => {
+
+    const { prefix, ticketCategoryId, staffRoleId, logChannelId, sellers } = config;
 
     // ================= PANEL =================
     client.on("messageCreate", async (message) => {
@@ -89,7 +91,7 @@ module.exports = (client) => {
             });
         }
 
-        // ===== TWORZENIE ZAKUP TICKET =====
+        // ===== TWORZENIE ZAKUP =====
         if (interaction.isButton() && interaction.customId.startsWith("zakup_")) {
 
             const { guild, user } = interaction;
@@ -103,10 +105,22 @@ module.exports = (client) => {
             }
 
             let sellerName = "";
+            let sellerId = "";
 
-            if (interaction.customId === "zakup_marcel") sellerName = "marcelpro1";
-            if (interaction.customId === "zakup_pingwin") sellerName = "Pingwin5774";
-            if (interaction.customId === "zakup_keksiak") sellerName = "keksiak2115_";
+            if (interaction.customId === "zakup_marcel") {
+                sellerName = "marcelpro1";
+                sellerId = sellers.marcel;
+            }
+
+            if (interaction.customId === "zakup_pingwin") {
+                sellerName = "Pingwin5774";
+                sellerId = sellers.pingwin;
+            }
+
+            if (interaction.customId === "zakup_keksiak") {
+                sellerName = "keksiak2115_";
+                sellerId = sellers.keksiak;
+            }
 
             const channel = await guild.channels.create({
                 name: `zakup-${sellerName}-${user.id}`,
@@ -125,7 +139,14 @@ module.exports = (client) => {
                         ]
                     },
                     {
-                        id: staffRoleId,
+                        id: sellerId,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages
+                        ]
+                    },
+                    {
+                        id: sellers.marcel, // Marcel ma dostęp do wszystkich
                         allow: [
                             PermissionsBitField.Flags.ViewChannel,
                             PermissionsBitField.Flags.SendMessages
@@ -152,7 +173,7 @@ module.exports = (client) => {
             );
 
             await channel.send({
-                content: `${user} <@&${staffRoleId}>`,
+                content: `${user} <@${sellerId}>`,
                 embeds: [embed],
                 components: [closeRow]
             });
@@ -163,7 +184,7 @@ module.exports = (client) => {
             });
         }
 
-        // ===== POZOSTAŁE TYPY =====
+        // ===== SKUP / POMOC / MM =====
         if (interaction.isButton() && ["skup","pomoc","mm"].includes(interaction.customId)) {
 
             const { guild, user, customId } = interaction;
@@ -245,7 +266,6 @@ module.exports = (client) => {
             return interaction.showModal(modal);
         }
 
-        // ===== PO MODALU =====
         if (interaction.isModalSubmit() && interaction.customId === "close_reason_modal") {
 
             const reason = interaction.fields.getTextInputValue("reason");
@@ -253,7 +273,6 @@ module.exports = (client) => {
             const guild = interaction.guild;
 
             const userId = channel.name.split("-").pop();
-
             const ticketOwner = await client.users.fetch(userId).catch(() => null);
 
             if (ticketOwner) {
