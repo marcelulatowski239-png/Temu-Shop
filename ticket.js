@@ -15,7 +15,13 @@ const config = require("./config");
 
 module.exports = (client) => {
 
-    const { prefix, ticketCategoryId, staffRoleId, logChannelId, sellers } = config;
+    const {
+        prefix,
+        ticketCategoryId,
+        staffRoleId,
+        logChannelId,
+        sellers
+    } = config;
 
     // ================= PANEL =================
     client.on("messageCreate", async (message) => {
@@ -36,22 +42,10 @@ module.exports = (client) => {
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("zakup")
-                    .setLabel("🛒 Zakup")
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId("skup")
-                    .setLabel("💰 Skup")
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId("pomoc")
-                    .setLabel("🆘 Pomoc")
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId("mm")
-                    .setLabel("🤝 MM")
-                    .setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId("zakup").setLabel("🛒 Zakup").setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId("skup").setLabel("💰 Skup").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId("pomoc").setLabel("🆘 Pomoc").setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId("mm").setLabel("🤝 MM").setStyle(ButtonStyle.Danger)
             );
 
             message.channel.send({ embeds: [embed], components: [row] });
@@ -61,22 +55,13 @@ module.exports = (client) => {
     // ================= INTERAKCJE =================
     client.on("interactionCreate", async (interaction) => {
 
-        // ===== WYBÓR SPRZEDAWCY =====
+        // ================= WYBÓR SPRZEDAWCY =================
         if (interaction.isButton() && interaction.customId === "zakup") {
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("zakup_marcel")
-                    .setLabel("marcelpro1")
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId("zakup_pingwin")
-                    .setLabel("Pingwin5774")
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId("zakup_keksiak")
-                    .setLabel("keksiak2115_")
-                    .setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId("zakup_marcel").setLabel("marcelpro1").setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId("zakup_pingwin").setLabel("Pingwin5774").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId("zakup_keksiak").setLabel("keksiak2115_").setStyle(ButtonStyle.Secondary)
             );
 
             return interaction.reply({
@@ -86,18 +71,27 @@ module.exports = (client) => {
             });
         }
 
-        // ===== TWORZENIE ZAKUP =====
+        // ================= BLOKADA 1 TICKET =================
+        const existing = interaction.guild?.channels.cache.find(c =>
+            c.name.endsWith(interaction.user.id)
+        );
+
+        if (existing &&
+            interaction.isButton() &&
+            !interaction.customId.startsWith("close")
+        ) {
+            return interaction.reply({
+                content: "❌ Masz już otwarty ticket!",
+                ephemeral: true
+            });
+        }
+
+        // ================= TWORZENIE ZAKUP =================
         if (interaction.isButton() && interaction.customId.startsWith("zakup_")) {
 
-            const { guild, user } = interaction;
+            await interaction.deferReply({ ephemeral: true });
 
-            const existing = guild.channels.cache.find(c => c.name.includes(user.id));
-            if (existing) {
-                return interaction.reply({
-                    content: "❌ Masz już otwarty ticket!",
-                    ephemeral: true
-                });
-            }
+            const { guild, user } = interaction;
 
             let sellerName = "";
             let sellerId = "";
@@ -106,12 +100,10 @@ module.exports = (client) => {
                 sellerName = "marcelpro1";
                 sellerId = sellers.marcel;
             }
-
             if (interaction.customId === "zakup_pingwin") {
                 sellerName = "Pingwin5774";
                 sellerId = sellers.pingwin;
             }
-
             if (interaction.customId === "zakup_keksiak") {
                 sellerName = "keksiak2115_";
                 sellerId = sellers.keksiak;
@@ -122,31 +114,10 @@ module.exports = (client) => {
                 type: ChannelType.GuildText,
                 parent: ticketCategoryId,
                 permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: sellerId,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: sellers.marcel,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    }
+                    { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    { id: sellerId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    { id: sellers.marcel, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
                 ]
             });
 
@@ -173,48 +144,27 @@ module.exports = (client) => {
                 components: [closeRow]
             });
 
-            return interaction.reply({
-                content: `✅ Ticket utworzony: ${channel}`,
-                ephemeral: true
+            return interaction.editReply({
+                content: `✅ Ticket utworzony: ${channel}`
             });
         }
 
-        // ===== SKUP / POMOC / MM =====
-        if (interaction.isButton() && ["skup","pomoc","mm"].includes(interaction.customId)) {
+        // ================= SKUP / POMOC / MM =================
+        if (interaction.isButton() && ["skup", "pomoc", "mm"].includes(interaction.customId)) {
+
+            await interaction.deferReply({ ephemeral: true });
 
             const { guild, user, customId } = interaction;
-
-            const existing = guild.channels.cache.find(c => c.name.includes(user.id));
-            if (existing) {
-                return interaction.reply({
-                    content: "❌ Masz już otwarty ticket!",
-                    ephemeral: true
-                });
-            }
 
             const channel = await guild.channels.create({
                 name: `${customId}-${user.id}`,
                 type: ChannelType.GuildText,
                 parent: ticketCategoryId,
                 permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: staffRoleId,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    }
+                    { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    { id: staffRoleId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    { id: sellers.marcel, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
                 ]
             });
 
@@ -237,13 +187,12 @@ module.exports = (client) => {
                 components: [closeRow]
             });
 
-            return interaction.reply({
-                content: `✅ Ticket utworzony: ${channel}`,
-                ephemeral: true
+            return interaction.editReply({
+                content: `✅ Ticket utworzony: ${channel}`
             });
         }
 
-        // ===== ZAMYKANIE =====
+        // ================= ZAMYKANIE =================
         if (interaction.isButton() && interaction.customId === "close_ticket") {
 
             const modal = new ModalBuilder()
@@ -260,8 +209,10 @@ module.exports = (client) => {
             return interaction.showModal(modal);
         }
 
-        // ===== PO MODALU =====
+        // ================= PO MODALU =================
         if (interaction.isModalSubmit() && interaction.customId === "close_reason_modal") {
+
+            await interaction.deferReply({ ephemeral: true });
 
             const reason = interaction.fields.getTextInputValue("reason");
             const channel = interaction.channel;
@@ -270,14 +221,9 @@ module.exports = (client) => {
             const userId = channel.name.split("-").pop();
             const ticketOwner = await client.users.fetch(userId).catch(() => null);
 
-            await interaction.reply({
-                content: "📁 Tworzenie transcriptu...",
-                ephemeral: true
-            });
-
             const attachment = await discordTranscripts.createTranscript(channel, {
                 limit: -1,
-                returnType: 'attachment',
+                returnType: "attachment",
                 filename: `${channel.name}.html`,
                 poweredBy: false
             });
@@ -297,6 +243,8 @@ module.exports = (client) => {
                     files: [attachment]
                 }).catch(() => {});
             }
+
+            await interaction.editReply("🔒 Ticket zamyka się za 3 sekundy...");
 
             setTimeout(() => {
                 channel.delete().catch(() => {});
