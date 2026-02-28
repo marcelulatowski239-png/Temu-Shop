@@ -9,104 +9,94 @@ const {
 
 module.exports = (client) => {
 
-    const OWNER_ID = "1472956273854255331";
-    const CATEGORY_ID = "1475471754221850857";
-
-    // PANEL
     client.on("messageCreate", async (message) => {
         if (message.author.bot) return;
-        if (message.content !== "!tickety") return;
+        if (!message.guild) return;
 
-        const embed = new EmbedBuilder()
-            .setTitle("🎫 System Ticketów")
-            .setDescription("Wybierz kategorię aby otworzyć ticket.")
-            .setColor("#5865F2");
+        if (message.content.toLowerCase() === "+ticket") {
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("ticket_zakup")
-                .setLabel("🛒 Zakup")
-                .setStyle(ButtonStyle.Success),
+            const embed = new EmbedBuilder()
+                .setColor("#FF6A00")
+                .setTitle("🎫 Panel Ticketów • TemuShop")
+                .setDescription("Wybierz kategorię, aby otworzyć ticket.")
+                .setFooter({ text: "TemuShop • System Ticketów" })
+                .setTimestamp();
 
-            new ButtonBuilder()
-                .setCustomId("ticket_skup")
-                .setLabel("💰 Skup")
-                .setStyle(ButtonStyle.Primary),
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("zakup")
+                    .setLabel("🛒 Zakup")
+                    .setStyle(ButtonStyle.Primary),
 
-            new ButtonBuilder()
-                .setCustomId("ticket_pomoc")
-                .setLabel("🆘 Pomoc")
-                .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId("skup")
+                    .setLabel("💰 skup")
+                    .setStyle(ButtonStyle.Success),
 
-            new ButtonBuilder()
-                .setCustomId("ticket_mm")
-                .setLabel("🔒 MM")
-                .setStyle(ButtonStyle.Danger)
-        );
+                new ButtonBuilder()
+                    .setCustomId("pomoc")
+                    .setLabel("🆘 Pomoc")
+                    .setStyle(ButtonStyle.Secondary),
 
-        message.channel.send({ embeds: [embed], components: [row] });
+                new ButtonBuilder()
+                    .setCustomId("mm")
+                    .setLabel("🤝 MM")
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+            message.reply({ embeds: [embed], components: [row] });
+        }
     });
 
-    // INTERACTION
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
 
-        const types = {
-            ticket_zakup: "zakup",
-            ticket_skup: "skup",
-            ticket_pomoc: "pomoc",
-            ticket_mm: "mm"
-        };
+        const { guild, user, customId } = interaction;
 
-        // ZAMYKANIE
-        if (interaction.customId === "close_ticket") {
+        const category = customId;
 
-            await interaction.deferReply({ ephemeral: true });
+        let descriptionText = "";
 
-            await interaction.editReply({
-                content: "🔒 Ticket zamyka się za 5 sekund..."
-            });
+        if (category === "zakup")
+            descriptionText = "🛒 Napisz co chcesz kupić.";
 
-            setTimeout(() => {
-                interaction.channel.delete().catch(() => {});
-            }, 5000);
+        if (category === "skup")
+            descriptionText = "💰 Napisz co chcesz sprzedać.";
 
-            return;
-        }
+        if (category === "pomoc")
+            descriptionText = "🆘 Opisz swój problem.";
 
-        if (!types[interaction.customId]) return;
+        if (category === "mm")
+            descriptionText = "🤝 Napisz z kim chcesz zrobić MM.";
 
-        await interaction.deferReply({ ephemeral: true });
-
-        const ticketType = types[interaction.customId];
-
-        const channel = await interaction.guild.channels.create({
-            name: `ticket-${ticketType}-${interaction.user.username}`,
+        const channel = await guild.channels.create({
+            name: `ticket-${user.username}`,
             type: ChannelType.GuildText,
-            parent: CATEGORY_ID, // 👈 PRZYPISANIE DO KATEGORII
             permissionOverwrites: [
                 {
-                    id: interaction.guild.roles.everyone,
-                    deny: [PermissionsBitField.Flags.ViewChannel],
+                    id: guild.roles.everyone,
+                    deny: [PermissionsBitField.Flags.ViewChannel]
                 },
                 {
-                    id: interaction.user.id,
+                    id: user.id,
                     allow: [
                         PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ReadMessageHistory
-                    ],
-                },
-                {
-                    id: OWNER_ID,
-                    allow: [
-                        PermissionsBitField.Flags.ViewChannel,
-                        PermissionsBitField.Flags.SendMessages,
-                        PermissionsBitField.Flags.ReadMessageHistory
-                    ],
-                },
-            ],
+                        PermissionsBitField.Flags.SendMessages
+                    ]
+                }
+            ]
         });
+
+        const embed = new EmbedBuilder()
+            .setColor("#2B2D31")
+            .setTitle("📩 Nowy Ticket")
+            .setDescription(
+                `Witaj ${user}\n\n` +
+                `Typ: **${category}**\n\n` +
+                `${descriptionText}`
+            )
+            .setFooter({ text: "TemuShop • Obsługa wkrótce się odezwie" })
+            .setTimestamp();
 
         const closeRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -115,20 +105,19 @@ module.exports = (client) => {
                 .setStyle(ButtonStyle.Danger)
         );
 
-        const ticketEmbed = new EmbedBuilder()
-            .setTitle("📩 Nowy Ticket")
-            .setDescription(`Witaj ${interaction.user}\n\nTyp: **${ticketType}**\nOpisz swój problem.`)
-            .setColor("#2f3136");
+        await channel.send({ content: `${user}`, embeds: [embed], components: [closeRow] });
 
-        await channel.send({
-            content: `<@${interaction.user.id}> <@${OWNER_ID}>`,
-            embeds: [ticketEmbed],
-            components: [closeRow]
-        });
-
-        await interaction.editReply({
-            content: `✅ Ticket utworzony w kategorii! ${channel}`
-        });
+        await interaction.reply({ content: `✅ Ticket utworzony: ${channel}`, ephemeral: true });
     });
 
+    client.on("interactionCreate", async (interaction) => {
+        if (!interaction.isButton()) return;
+        if (interaction.customId !== "close_ticket") return;
+
+        await interaction.reply({ content: "🔒 Ticket zamknięty.", ephemeral: true });
+
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 3000);
+    });
 };
