@@ -7,19 +7,28 @@ const {
     PermissionsBitField
 } = require("discord.js");
 
+const { prefix, ticketCategoryId, staffRoleId, logChannelId } = require("./config");
+
 module.exports = (client) => {
 
+    // 🔹 PANEL TICKET
     client.on("messageCreate", async (message) => {
-        if (message.author.bot) return;
         if (!message.guild) return;
+        if (message.author.bot) return;
 
-        if (message.content.toLowerCase() === "!ticket") {
+        if (message.content.toLowerCase() === `${prefix}ticket`) {
 
             const embed = new EmbedBuilder()
                 .setColor("#FF6A00")
-                .setTitle("🎫 Panel Ticketów • TemuShop")
-                .setDescription("Wybierz kategorię, aby otworzyć ticket.")
-                .setFooter({ text: "TemuShop • System Ticketów" })
+                .setTitle("🎫 TemuShop • System Ticketów")
+                .setDescription(
+                    "Wybierz kategorię poniżej, aby otworzyć ticket.\n\n" +
+                    "🛒 Zakup\n" +
+                    "💰 Kupno\n" +
+                    "🆘 Pomoc\n" +
+                    "🤝 MM"
+                )
+                .setFooter({ text: "TemuShop • Premium Support" })
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
@@ -30,7 +39,7 @@ module.exports = (client) => {
 
                 new ButtonBuilder()
                     .setCustomId("skup")
-                    .setLabel("💰 skup")
+                    .setLabel("💰 Kskup")
                     .setStyle(ButtonStyle.Success),
 
                 new ButtonBuilder()
@@ -44,34 +53,76 @@ module.exports = (client) => {
                     .setStyle(ButtonStyle.Danger)
             );
 
-            message.reply({ embeds: [embed], components: [row] });
+            message.channel.send({ embeds: [embed], components: [row] });
         }
     });
 
+    // 🔹 OBSŁUGA PRZYCISKÓW
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.isButton()) return;
 
         const { guild, user, customId } = interaction;
 
-        const category = customId;
+        // 🔒 ZAMKNIĘCIE
+        if (customId === "close_ticket") {
+
+            const logChannel = guild.channels.cache.get(logChannelId);
+
+            if (logChannel) {
+                const logEmbed = new EmbedBuilder()
+                    .setColor("#E74C3C")
+                    .setTitle("🔒 Ticket Zamknięty")
+                    .setDescription(
+                        `Ticket: ${interaction.channel.name}\n` +
+                        `Zamknięty przez: ${user}`
+                    )
+                    .setTimestamp();
+
+                logChannel.send({ embeds: [logEmbed] });
+            }
+
+            await interaction.reply({ content: "🔒 Ticket zamykany...", ephemeral: true });
+
+            setTimeout(() => {
+                interaction.channel.delete().catch(() => {});
+            }, 2000);
+
+            return;
+        }
+
+        // ❌ BLOKADA 1 TICKETU
+        const existing = guild.channels.cache.find(c =>
+            c.name === `ticket-${user.id}`
+        );
+
+        if (existing) {
+            return interaction.reply({
+                content: "❌ Masz już otwarty ticket!",
+                ephemeral: true
+            });
+        }
 
         let descriptionText = "";
 
-        if (category === "zakup")
+        if (customId === "zakup")
             descriptionText = "🛒 Napisz co chcesz kupić.";
 
-        if (category === "skup")
+        if (customId === "skup")
             descriptionText = "💰 Napisz co chcesz sprzedać.";
 
-        if (category === "pomoc")
+        if (customId === "pomoc")
             descriptionText = "🆘 Opisz swój problem.";
 
-        if (category === "mm")
+        if (customId === "mm")
             descriptionText = "🤝 Napisz z kim chcesz zrobić MM.";
 
+        if (!descriptionText) return;
+
+        // 🔹 TWORZENIE KANAŁU
         const channel = await guild.channels.create({
-            name: `ticket-${user.username}`,
+            name: `ticket-${user.id}`,
             type: ChannelType.GuildText,
+            parent: ticketCategoryId,
             permissionOverwrites: [
                 {
                     id: guild.roles.everyone,
@@ -83,41 +134,45 @@ module.exports = (client) => {
                         PermissionsBitField.Flags.ViewChannel,
                         PermissionsBitField.Flags.SendMessages
                     ]
+                },
+                {
+                    id: staffRoleId,
+                    allow: [
+                        PermissionsBitField.Flags.ViewChannel,
+                        PermissionsBitField.Flags.SendMessages
+                    ]
                 }
             ]
         });
 
         const embed = new EmbedBuilder()
             .setColor("#2B2D31")
-            .setTitle("📩 Nowy Ticket")
+            .setTitle("📩 Nowy Ticket • TemuShop")
             .setDescription(
                 `Witaj ${user}\n\n` +
-                `Typ: **${category}**\n\n` +
+                `Typ: **${customId}**\n\n` +
                 `${descriptionText}`
             )
-            .setFooter({ text: "TemuShop • Obsługa wkrótce się odezwie" })
+            .setFooter({ text: "TemuShop • Support odpowie wkrótce" })
             .setTimestamp();
 
         const closeRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("close_ticket")
-                .setLabel("🔒 Zamknij ticket")
+                .setLabel("🔒 Zamknij Ticket")
                 .setStyle(ButtonStyle.Danger)
         );
 
-        await channel.send({ content: `${user}`, embeds: [embed], components: [closeRow] });
+        await channel.send({
+            content: `${user} <@&${staffRoleId}>`,
+            embeds: [embed],
+            components: [closeRow]
+        });
 
-        await interaction.reply({ content: `✅ Ticket utworzony: ${channel}`, ephemeral: true });
+        await interaction.reply({
+            content: `✅ Ticket utworzony: ${channel}`,
+            ephemeral: true
+        });
     });
 
-    client.on("interactionCreate", async (interaction) => {
-        if (!interaction.isButton()) return;
-        if (interaction.customId !== "close_ticket") return;
-
-        await interaction.reply({ content: "🔒 Ticket zamknięty.", ephemeral: true });
-
-        setTimeout(() => {
-            interaction.channel.delete().catch(() => {});
-        }, 3000);
-    });
 };
