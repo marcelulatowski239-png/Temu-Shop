@@ -275,13 +275,24 @@ module.exports = (client) => {
             const userId = channel.name.split("-").pop();
             const ticketOwner = await client.users.fetch(userId).catch(() => null);
 
-            // USUŃ WSZYSTKIE PRZYCISKI
-            const messages = await channel.messages.fetch({ limit: 50 });
-            for (const msg of messages.values()) {
-                if (msg.components.length > 0) {
-                    await msg.edit({ components: [] }).catch(() => {});
-                }
-            }
+            // USUŃ WSZYSTKIE PRZYCISKI (pobiera wiadomości partiami)
+let lastId;
+
+while (true) {
+    const options = { limit: 100 };
+    if (lastId) options.before = lastId;
+
+    const messages = await channel.messages.fetch(options);
+    if (messages.size === 0) break;
+
+    for (const msg of messages.values()) {
+        if (msg.components.length > 0) {
+            await msg.edit({ components: [] }).catch(() => {});
+        }
+    }
+
+    lastId = messages.last().id;
+}
 
             // DM
             if (ticketOwner) {
