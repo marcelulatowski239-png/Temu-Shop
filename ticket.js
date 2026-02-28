@@ -146,7 +146,7 @@ module.exports = (client) => {
                         ]
                     },
                     {
-                        id: sellers.marcel, // Marcel ma dostęp do wszystkich
+                        id: sellers.marcel, // Marcel ma dostęp do wszystkich zakupów
                         allow: [
                             PermissionsBitField.Flags.ViewChannel,
                             PermissionsBitField.Flags.SendMessages
@@ -262,10 +262,10 @@ module.exports = (client) => {
                 .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(input));
-
             return interaction.showModal(modal);
         }
 
+        // ===== PO MODALU =====
         if (interaction.isModalSubmit() && interaction.customId === "close_reason_modal") {
 
             const reason = interaction.fields.getTextInputValue("reason");
@@ -275,6 +275,15 @@ module.exports = (client) => {
             const userId = channel.name.split("-").pop();
             const ticketOwner = await client.users.fetch(userId).catch(() => null);
 
+            // USUŃ WSZYSTKIE PRZYCISKI
+            const messages = await channel.messages.fetch({ limit: 50 });
+            for (const msg of messages.values()) {
+                if (msg.components.length > 0) {
+                    await msg.edit({ components: [] }).catch(() => {});
+                }
+            }
+
+            // DM
             if (ticketOwner) {
                 ticketOwner.send({
                     embeds: [
@@ -291,6 +300,7 @@ module.exports = (client) => {
                 }).catch(() => {});
             }
 
+            // LOG
             const logChannel = guild.channels.cache.get(logChannelId);
             if (logChannel) {
                 logChannel.send({
@@ -309,7 +319,7 @@ module.exports = (client) => {
             }
 
             await interaction.reply({
-                content: "🔒 Ticket zostanie usunięty za 3 sekundy...",
+                content: "🔒 Ticket zamknięty. Usuwanie za 3 sekundy...",
                 ephemeral: true
             });
 
