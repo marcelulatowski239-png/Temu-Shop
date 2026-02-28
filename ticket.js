@@ -13,7 +13,7 @@ module.exports = (client) => {
         if (message.author.bot) return;
         if (!message.guild) return;
 
-        if (message.content.toLowerCase() === "+ticket") {
+        if (message.content.toLowerCase() === "!ticket") {
 
             const embed = new EmbedBuilder()
                 .setColor("#FF6A00")
