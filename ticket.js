@@ -14,7 +14,7 @@ const { prefix, ticketCategoryId, staffRoleId, logChannelId } = require("./confi
 
 module.exports = (client) => {
 
-    // ================= PANEL =================
+    // ================= PANEL TICKET =================
     client.on("messageCreate", async (message) => {
         if (!message.guild || message.author.bot) return;
 
@@ -59,10 +59,10 @@ module.exports = (client) => {
         }
     });
 
-    // ================= INTERAKCJE =================
+    // ================= OBSŁUGA INTERAKCJI =================
     client.on("interactionCreate", async (interaction) => {
 
-        // ================= ZAMKNIĘCIE (PRZYCISK) =================
+        // ====== KLIKNIĘCIE ZAMKNIJ ======
         if (interaction.isButton() && interaction.customId === "close_ticket") {
 
             const modal = new ModalBuilder()
@@ -73,9 +73,9 @@ module.exports = (client) => {
                 .setCustomId("close_reason_input")
                 .setLabel("Podaj powód zamknięcia")
                 .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
                 .setMinLength(3)
                 .setMaxLength(500)
-                .setRequired(true)
                 .setPlaceholder("Np. Sprawa rozwiązana / Brak odpowiedzi");
 
             const row = new ActionRowBuilder().addComponents(reasonInput);
@@ -84,7 +84,7 @@ module.exports = (client) => {
             return interaction.showModal(modal);
         }
 
-        // ================= PO WYSŁANIU MODALA =================
+        // ====== PO WYSŁANIU MODALA ======
         if (interaction.isModalSubmit() && interaction.customId === "close_reason_modal") {
 
             const reason = interaction.fields.getTextInputValue("close_reason_input");
@@ -100,7 +100,7 @@ module.exports = (client) => {
                 ticketOwner = null;
             }
 
-            // 📩 DM DO OSOBY KTÓRA STWORZYŁA TICKET
+            // 📩 DM DO AUTORA TICKETU
             if (ticketOwner) {
                 ticketOwner.send({
                     embeds: [
@@ -114,9 +114,7 @@ module.exports = (client) => {
                             )
                             .setTimestamp()
                     ]
-                }).catch(() => {
-                    console.log("Nie można wysłać DM.");
-                });
+                }).catch(() => {});
             }
 
             // 📜 LOG
@@ -149,7 +147,7 @@ module.exports = (client) => {
             return;
         }
 
-        // ================= TWORZENIE TICKETU =================
+        // ====== TWORZENIE TICKETU ======
         if (!interaction.isButton()) return;
 
         const { guild, user, customId } = interaction;
@@ -231,7 +229,5 @@ module.exports = (client) => {
             content: `✅ Ticket utworzony: ${channel}`,
             ephemeral: true
         });
-
     });
-
 };
