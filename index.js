@@ -1,6 +1,20 @@
+const discordTranscripts = require("discord-html-transcripts");
+
 const help = require("./help");
 
+const logs = require("./logs"); 
+
+const welcomeleaveboost = require("./welcomeleaveboost");
+
+const voiceStats = require("./voiceStats");
+
+const antilink = require("./antilink");
+
+const antispam = require("./antispam");
+
 const profil = require("./profil");
+
+const stats = require("./stats");
 
 const levels = require("./level");
 
@@ -25,6 +39,12 @@ const client = new Client({
   ]
 });
 
+antispam(client);
+antilink(client);
+voiceStats(client);
+stats(client);
+welcomeleaveboost(client);
+logs(client);
 profil(client);
 glosowanie(client);
 rep(client);
@@ -392,4 +412,4 @@ client.on("messageCreate", async (message) => {
   if (command === "help") {
     return help.execute(message, args, client);
   }
-});2
+});
