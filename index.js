@@ -1,3 +1,5 @@
+const discordTranscripts = require("discord-html-transcripts");
+
 const help = require("./help");
 
 const logs = require("./logs"); 

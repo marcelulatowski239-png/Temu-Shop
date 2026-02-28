@@ -10,6 +10,7 @@ const {
     TextInputStyle
 } = require("discord.js");
 
+const discordTranscripts = require("discord-html-transcripts");
 const config = require("./config");
 
 module.exports = (client) => {
@@ -32,7 +33,6 @@ module.exports = (client) => {
                     "🆘 Pomoc\n" +
                     "🤝 MM"
                 )
-                .setFooter({ text: "TemuShop • Premium Support" })
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
@@ -40,17 +40,14 @@ module.exports = (client) => {
                     .setCustomId("zakup")
                     .setLabel("🛒 Zakup")
                     .setStyle(ButtonStyle.Primary),
-
                 new ButtonBuilder()
                     .setCustomId("skup")
                     .setLabel("💰 Skup")
                     .setStyle(ButtonStyle.Success),
-
                 new ButtonBuilder()
                     .setCustomId("pomoc")
                     .setLabel("🆘 Pomoc")
                     .setStyle(ButtonStyle.Secondary),
-
                 new ButtonBuilder()
                     .setCustomId("mm")
                     .setLabel("🤝 MM")
@@ -72,12 +69,10 @@ module.exports = (client) => {
                     .setCustomId("zakup_marcel")
                     .setLabel("marcelpro1")
                     .setStyle(ButtonStyle.Primary),
-
                 new ButtonBuilder()
                     .setCustomId("zakup_pingwin")
                     .setLabel("Pingwin5774")
                     .setStyle(ButtonStyle.Success),
-
                 new ButtonBuilder()
                     .setCustomId("zakup_keksiak")
                     .setLabel("keksiak2115_")
@@ -146,7 +141,7 @@ module.exports = (client) => {
                         ]
                     },
                     {
-                        id: sellers.marcel, // Marcel ma dostęp do wszystkich zakupów
+                        id: sellers.marcel,
                         allow: [
                             PermissionsBitField.Flags.ViewChannel,
                             PermissionsBitField.Flags.SendMessages
@@ -275,64 +270,33 @@ module.exports = (client) => {
             const userId = channel.name.split("-").pop();
             const ticketOwner = await client.users.fetch(userId).catch(() => null);
 
-            // USUŃ WSZYSTKIE PRZYCISKI (pobiera wiadomości partiami)
-let lastId;
+            await interaction.reply({
+                content: "📁 Tworzenie transcriptu...",
+                ephemeral: true
+            });
 
-while (true) {
-    const options = { limit: 100 };
-    if (lastId) options.before = lastId;
+            const attachment = await discordTranscripts.createTranscript(channel, {
+                limit: -1,
+                returnType: 'attachment',
+                filename: `${channel.name}.html`,
+                poweredBy: false
+            });
 
-    const messages = await channel.messages.fetch(options);
-    if (messages.size === 0) break;
-
-    for (const msg of messages.values()) {
-        if (msg.components.length > 0) {
-            await msg.edit({ components: [] }).catch(() => {});
-        }
-    }
-
-    lastId = messages.last().id;
-}
-
-            // DM
-            if (ticketOwner) {
-                ticketOwner.send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setColor("#E74C3C")
-                            .setTitle("🔒 Twój ticket został zamknięty")
-                            .setDescription(
-                                `📌 Serwer: ${guild.name}\n` +
-                                `👮 Zamknięty przez: ${interaction.user}\n\n` +
-                                `📝 Powód:\n${reason}`
-                            )
-                            .setTimestamp()
-                    ]
-                }).catch(() => {});
-            }
-
-            // LOG
             const logChannel = guild.channels.cache.get(logChannelId);
+
             if (logChannel) {
-                logChannel.send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setColor("#E74C3C")
-                            .setTitle("🔒 Ticket Zamknięty")
-                            .setDescription(
-                                `🎫 ${channel.name}\n` +
-                                `👮 ${interaction.user}\n\n` +
-                                `📝 ${reason}`
-                            )
-                            .setTimestamp()
-                    ]
+                await logChannel.send({
+                    content: `📁 Transcript z ${channel.name}\n🔒 Zamknięty przez: ${interaction.user}\n📝 Powód: ${reason}`,
+                    files: [attachment]
                 });
             }
 
-            await interaction.reply({
-                content: "🔒 Ticket zamknięty. Usuwanie za 3 sekundy...",
-                ephemeral: true
-            });
+            if (ticketOwner) {
+                await ticketOwner.send({
+                    content: `🔒 Twój ticket został zamknięty.\n📝 Powód: ${reason}`,
+                    files: [attachment]
+                }).catch(() => {});
+            }
 
             setTimeout(() => {
                 channel.delete().catch(() => {});
