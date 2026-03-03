@@ -1,48 +1,58 @@
-const { 
-  EmbedBuilder, 
-  PermissionsBitField 
+const {
+  EmbedBuilder,
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ComponentType
 } = require("discord.js");
 
-const MIN_DURATION = 60 * 1000; // 1 minuta
-const MAX_DURATION = 10 * 24 * 60 * 60 * 1000; // 10 dni
+const GIVEAWAY_CHANNEL_ID = "1472956274613157919";
+
+const activeGiveaways = new Map();
+
+const MIN_DURATION = 60 * 1000;
+const MAX_DURATION = 10 * 24 * 60 * 60 * 1000;
 const MAX_WINNERS = 50;
 
-function parseDuration(args) {
-  let total = 0;
-  const units = {
-    s: 1000,
-    m: 60000,
-    h: 3600000,
-    d: 86400000
-  };
+const timeUnits = {
+  s: 1000,
+  m: 60000,
+  h: 3600000,
+  d: 86400000
+};
+
+function parseArgs(args) {
+  let duration = 0;
+  let winners = null;
+  let prize = [];
 
   for (const arg of args) {
-    const match = arg.match(/^(\d+)(s|m|h|d)$/);
-    if (!match) break;
+    const timeMatch = arg.match(/^(\d+)(s|m|h|d)$/);
+    if (timeMatch) {
+      duration += parseInt(timeMatch[1]) * timeUnits[timeMatch[2]];
+      continue;
+    }
 
-    const value = parseInt(match[1]);
-    const unit = match[2];
+    if (!isNaN(arg) && winners === null) {
+      winners = parseInt(arg);
+      continue;
+    }
 
-    total += value * units[unit];
+    prize.push(arg);
   }
 
-  return total;
+  return { duration, winners, prize: prize.join(" ") };
 }
 
-function removeTimeArgs(args) {
-  while (args.length && /^\d+(s|m|h|d)$/.test(args[0])) {
-    args.shift();
-  }
-}
-
-function pickWinners(collection, count) {
+function pickRandom(arr, count) {
+  const copy = [...arr];
   const winners = [];
-  const users = Array.from(collection.values());
 
-  for (let i = 0; i < count && users.length > 0; i++) {
-    const index = Math.floor(Math.random() * users.length);
-    winners.push(users[index]);
-    users.splice(index, 1);
+  for (let i = 0; i < count && copy.length > 0; i++) {
+    const index = Math.floor(Math.random() * copy.length);
+    winners.push(copy[index]);
+    copy.splice(index, 1);
   }
 
   return winners;
@@ -59,95 +69,114 @@ module.exports = (client) => {
 
     if (cmd !== "giveaway") return;
 
-    // 🔒 ADMIN ONLY
+    // 🔒 Tylko jeden kanał
+    if (message.channel.id !== GIVEAWAY_CHANNEL_ID) {
+      return message.reply("❌ Giveaway można tworzyć tylko w wyznaczonym kanale.");
+    }
+
+    // 🔒 Admin only
     if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       return message.reply("❌ Tylko administrator może tworzyć giveaway.");
     }
 
-    const duration = parseDuration(args);
+    const { duration, winners, prize } = parseArgs(args);
 
-    if (!duration || duration < MIN_DURATION || duration > MAX_DURATION) {
-      return message.reply("❌ Czas musi być od 1 minuty do 10 dni.");
-    }
+    if (!duration || duration < MIN_DURATION || duration > MAX_DURATION)
+      return message.reply("❌ Czas: 1 minuta – 10 dni.");
 
-    removeTimeArgs(args);
+    if (!winners || winners < 1 || winners > MAX_WINNERS)
+      return message.reply(`❌ Zwycięzcy: 1–${MAX_WINNERS}.`);
 
-    const winnerCount = parseInt(args[0]);
-
-    if (!winnerCount || winnerCount < 1 || winnerCount > MAX_WINNERS) {
-      return message.reply(`❌ Liczba zwycięzców: 1–${MAX_WINNERS}.`);
-    }
-
-    args.shift();
-
-    const prize = args.join(" ");
-    if (!prize) {
-      return message.reply("❌ Musisz podać nagrodę.");
-    }
+    if (!prize)
+      return message.reply("❌ Podaj nagrodę.");
 
     const endTimestamp = Math.floor((Date.now() + duration) / 1000);
+
+    const participants = new Set();
+
+    const button = new ButtonBuilder()
+      .setCustomId("join_giveaway")
+      .setLabel("🎉 Dołącz (0)")
+      .setStyle(ButtonStyle.Primary);
+
+    const row = new ActionRowBuilder().addComponents(button);
 
     const embed = new EmbedBuilder()
       .setTitle("🎉 GIVEAWAY 🎉")
       .setColor("#FFD700")
       .setDescription(
         `🎁 **Nagroda:** ${prize}\n` +
-        `👑 **Zwycięzców:** ${winnerCount}\n` +
+        `👑 **Zwycięzców:** ${winners}\n` +
         `⏳ **Koniec:** <t:${endTimestamp}:R>\n\n` +
-        `Kliknij 🎉 aby wziąć udział!`
+        `Kliknij przycisk aby wziąć udział!`
       )
       .setFooter({ text: `Organizator: ${message.author.tag}` })
       .setTimestamp();
 
-    const giveawayMessage = await message.channel.send({ embeds: [embed] });
-    await giveawayMessage.react("🎉");
+    const giveawayMessage = await message.channel.send({
+      embeds: [embed],
+      components: [row]
+    });
 
-    const timeout = setTimeout(async () => {
+    activeGiveaways.set(giveawayMessage.id, {
+      prize,
+      winners,
+      participants
+    });
 
-      try {
-        const fetched = await message.channel.messages.fetch(giveawayMessage.id).catch(() => null);
-        if (!fetched) return;
+    const collector = giveawayMessage.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: duration
+    });
 
-        const reaction = fetched.reactions.cache.get("🎉");
-        if (!reaction) {
-          return message.channel.send("❌ Giveaway zakończony — brak uczestników.");
-        }
+    collector.on("collect", async (interaction) => {
+      if (interaction.customId !== "join_giveaway") return;
 
-        const users = await reaction.users.fetch();
-        const validUsers = users.filter(u => !u.bot);
-
-        const participantCount = validUsers.size;
-
-        if (participantCount === 0) {
-          return message.channel.send("❌ Giveaway zakończony — nikt nie wziął udziału.");
-        }
-
-        const winners = pickWinners(validUsers, winnerCount);
-
-        const endedEmbed = new EmbedBuilder()
-          .setTitle("🎉 GIVEAWAY ZAKOŃCZONY 🎉")
-          .setColor("#00FF7F")
-          .setDescription(
-            `🎁 **Nagroda:** ${prize}\n` +
-            `👑 **Zwycięzcy:** ${winners.join(", ")}\n` +
-            `👥 **Uczestników:** ${participantCount}`
-          )
-          .setFooter({ text: "Giveaway zakończony" })
-          .setTimestamp();
-
-        await fetched.edit({ embeds: [endedEmbed] });
-
-        await message.channel.send(
-          `🎉 Gratulacje ${winners.join(", ")}!\nWygraliście **${prize}**!`
-        );
-
-      } catch (err) {
-        console.error("Giveaway error:", err);
+      if (participants.has(interaction.user.id)) {
+        participants.delete(interaction.user.id);
+        await interaction.reply({ content: "❌ Opuściłeś giveaway.", ephemeral: true });
+      } else {
+        participants.add(interaction.user.id);
+        await interaction.reply({ content: "✅ Dołączyłeś!", ephemeral: true });
       }
 
-      clearTimeout(timeout);
+      button.setLabel(`🎉 Dołącz (${participants.size})`);
+      await giveawayMessage.edit({ components: [new ActionRowBuilder().addComponents(button)] });
+    });
 
-    }, duration);
+    collector.on("end", async () => {
+
+      const users = Array.from(participants);
+
+      if (users.length === 0) {
+        await giveawayMessage.edit({ components: [] });
+        return message.channel.send("❌ Giveaway zakończony — brak uczestników.");
+      }
+
+      const winnersList = pickRandom(users, winners)
+        .map(id => `<@${id}>`);
+
+      const endedEmbed = new EmbedBuilder()
+        .setTitle("🎉 GIVEAWAY ZAKOŃCZONY 🎉")
+        .setColor("Green")
+        .setDescription(
+          `🎁 **Nagroda:** ${prize}\n` +
+          `👑 **Zwycięzcy:** ${winnersList.join(", ")}\n` +
+          `👥 **Uczestników:** ${users.length}`
+        )
+        .setTimestamp();
+
+      await giveawayMessage.edit({
+        embeds: [endedEmbed],
+        components: []
+      });
+
+      message.channel.send(
+        `🎉 Gratulacje ${winnersList.join(", ")}!\nWygraliście **${prize}**!`
+      );
+
+      activeGiveaways.delete(giveawayMessage.id);
+    });
   });
 
 };
