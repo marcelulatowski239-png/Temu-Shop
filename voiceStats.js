@@ -3,8 +3,7 @@ const { ChannelType, PermissionsBitField } = require("discord.js");
 module.exports = (client) => {
 
     client.on("ready", async () => {
-        const guild = client.guilds.cache.first(); // jeśli bot jest na 1 serwerze
-
+        const guild = client.guilds.cache.first();
         if (!guild) return;
 
         await guild.members.fetch();
@@ -12,21 +11,20 @@ module.exports = (client) => {
 
         const users = members.filter(m => !m.user.bot).size;
         const bots = members.filter(m => m.user.bot).size;
+        const boosts = guild.premiumSubscriptionCount;
 
-        // Sprawdza czy kanał już istnieje
         let userChannel = guild.channels.cache.find(c => c.name.startsWith("👥 Osoby:"));
         let botChannel = guild.channels.cache.find(c => c.name.startsWith("🤖 Boty:"));
+        let boostChannel = guild.channels.cache.find(c => c.name.startsWith("🚀 Boosty:"));
 
         if (!userChannel) {
             userChannel = await guild.channels.create({
                 name: `👥 Osoby: ${users}`,
                 type: ChannelType.GuildVoice,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.Connect]
-                    }
-                ]
+                permissionOverwrites: [{
+                    id: guild.roles.everyone,
+                    deny: [PermissionsBitField.Flags.Connect]
+                }]
             });
         }
 
@@ -34,19 +32,28 @@ module.exports = (client) => {
             botChannel = await guild.channels.create({
                 name: `🤖 Boty: ${bots}`,
                 type: ChannelType.GuildVoice,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.Connect]
-                    }
-                ]
+                permissionOverwrites: [{
+                    id: guild.roles.everyone,
+                    deny: [PermissionsBitField.Flags.Connect]
+                }]
+            });
+        }
+
+        if (!boostChannel) {
+            boostChannel = await guild.channels.create({
+                name: `🚀 Boosty: ${boosts}`,
+                type: ChannelType.GuildVoice,
+                permissionOverwrites: [{
+                    id: guild.roles.everyone,
+                    deny: [PermissionsBitField.Flags.Connect]
+                }]
             });
         }
     });
 
-    // Aktualizacja gdy ktoś wchodzi / wychodzi
     client.on("guildMemberAdd", updateStats);
     client.on("guildMemberRemove", updateStats);
+    client.on("guildUpdate", updateBoosts);
 
     async function updateStats(member) {
         const guild = member.guild;
@@ -62,6 +69,15 @@ module.exports = (client) => {
 
         if (userChannel) userChannel.setName(`👥 Osoby: ${users}`);
         if (botChannel) botChannel.setName(`🤖 Boty: ${bots}`);
+    }
+
+    async function updateBoosts(oldGuild, newGuild) {
+        if (oldGuild.premiumSubscriptionCount === newGuild.premiumSubscriptionCount) return;
+
+        const boostChannel = newGuild.channels.cache.find(c => c.name.startsWith("🚀 Boosty:"));
+        if (boostChannel) {
+            boostChannel.setName(`🚀 Boosty: ${newGuild.premiumSubscriptionCount}`);
+        }
     }
 
 };
