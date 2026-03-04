@@ -14,6 +14,8 @@ module.exports = (client) => {
             const users = members.filter(m => !m.user.bot).size;
             const bots = members.filter(m => m.user.bot).size;
             const total = message.guild.memberCount;
+            const boosts = message.guild.premiumSubscriptionCount;
+            const boostLevel = message.guild.premiumTier;
 
             const embed = new EmbedBuilder()
                 .setColor("#5865F2")
@@ -26,7 +28,9 @@ module.exports = (client) => {
                 .addFields(
                     { name: "👥 Użytkownicy", value: `\`${users}\``, inline: true },
                     { name: "🤖 Boty", value: `\`${bots}\``, inline: true },
-                    { name: "📈 Razem", value: `\`${total}\``, inline: true }
+                    { name: "📈 Razem", value: `\`${total}\``, inline: true },
+                    { name: "🚀 Wzmocnienia", value: `\`${boosts}\``, inline: true },
+                    { name: "⭐ Poziom boosta", value: `\`Poziom ${boostLevel}\``, inline: true }
                 )
                 .setFooter({
                     text: `Wywołane przez ${message.author.tag}`,
