@@ -9,110 +9,204 @@ const config = {
 
 module.exports = (client) => {
 
-  /* =========================
-     👋 WELCOME SYSTEM
-  ========================== */
-  client.on("guildMemberAdd", async (member) => {
-    const channel = member.guild.channels.cache.get(config.welcomeChannelId);
-    if (!channel) return;
+////////////////////////////////////////////////////
+//////////////////// WELCOME ///////////////////////
+////////////////////////////////////////////////////
 
-    const user = await member.user.fetch(true);
+client.on("guildMemberAdd", async (member) => {
 
-    const embed = new EmbedBuilder()
-      .setColor("#00ffcc")
-      .setTitle("🎉 Witaj na serwerze!")
-      .setDescription(
-`👋 Cześć ${member}!
+const channel = member.guild.channels.cache.get(config.welcomeChannelId);
+if (!channel) return;
 
-Witaj na **${member.guild.name}**
-Jesteś naszym **${member.guild.memberCount}** członkiem 🔥`
-      )
-      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-      .setImage(user.bannerURL({ size: 1024 }) || null)
-      .addFields({
-        name: "📌 Informacje",
-        value:
-`ID: ${user.id}
-Konto utworzone: <t:${Math.floor(user.createdTimestamp/1000)}:F>
-Dołączył: <t:${Math.floor(member.joinedTimestamp/1000)}:F>`
-      })
-      .setFooter({ text: member.guild.name })
-      .setTimestamp();
+const user = await member.user.fetch(true);
 
-    channel.send({ embeds: [embed] });
-  });
+const banner = user.bannerURL({ size: 1024 }) ||
+"https://media.discordapp.net/attachments/1048655323357771826/1114980924234819664/welcome.gif";
 
+const embed = new EmbedBuilder()
 
-  /* =========================
-     🚀 BOOST SYSTEM
-  ========================== */
-  client.on("guildMemberUpdate", async (oldMember, newMember) => {
+.setColor("#00d9ff")
 
-    if (!oldMember.premiumSince && newMember.premiumSince) {
+.setAuthor({
+name: `${user.tag}`,
+iconURL: user.displayAvatarURL({ dynamic: true })
+})
 
-      const channel = newMember.guild.channels.cache.get(config.boostChannelId);
-      if (!channel) return;
+.setTitle("👋 Nowy użytkownik!")
 
-      const user = await newMember.user.fetch(true);
+.setDescription(
+`🎉 **${member} dołączył do serwera!**
 
-      if (config.boostRoleId) {
-        newMember.roles.add(config.boostRoleId).catch(() => {});
-      }
+Witaj na **${member.guild.name}**  
+Jesteś naszym **${member.guild.memberCount}** członkiem 🚀`
+)
 
-      const embed = new EmbedBuilder()
-        .setColor("#ff73fa")
-        .setTitle("🚀 NOWY BOOSTER!")
-        .setDescription(
-`🔥 ${newMember} właśnie zboostował serwer!
+.addFields(
 
-Dziękujemy za wsparcie 💎`
-        )
-        .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-        .setImage(user.bannerURL({ size: 1024 }) || null)
-        .addFields({
-          name: "💜 Informacje",
-          value:
-`ID: ${user.id}
-Boost od: <t:${Math.floor(newMember.premiumSinceTimestamp/1000)}:F>`
-        })
-        .setFooter({ text: "Dziękujemy za wsparcie!" })
-        .setTimestamp();
+{
+name: "🆔 ID użytkownika",
+value: `${user.id}`,
+inline: true
+},
 
-      channel.send({ embeds: [embed] });
-    }
-  });
+{
+name: "📅 Konto utworzone",
+value: `<t:${Math.floor(user.createdTimestamp/1000)}:R>`,
+inline: true
+},
 
+{
+name: "📥 Dołączył",
+value: `<t:${Math.floor(member.joinedTimestamp/1000)}:F>`,
+inline: false
+}
 
-  /* =========================
-     🚪 LEAVE SYSTEM
-  ========================== */
-  client.on("guildMemberRemove", async (member) => {
+)
 
-    const channel = member.guild.channels.cache.get(config.leaveChannelId);
-    if (!channel) return;
+.setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
 
-    const user = await member.user.fetch(true);
+.setImage(banner)
 
-    const days = Math.floor(
-      (Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24)
-    );
+.setFooter({
+text: `Obecnie ${member.guild.memberCount} użytkowników`,
+iconURL: member.guild.iconURL()
+})
 
-    const embed = new EmbedBuilder()
-      .setColor("#ff4d4d")
-      .setTitle("😢 Użytkownik opuścił serwer")
-      .setDescription(`${member.user.tag} opuścił serwer.`)
-      .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
-      .addFields({
-        name: "📊 Informacje",
-        value:
-`ID: ${user.id}
-Był z nami: ${days} dni
-Dołączył: <t:${Math.floor(member.joinedTimestamp/1000)}:F>`
-      })
-      .setFooter({ text: `Aktualnie ${member.guild.memberCount} członków` })
-      .setTimestamp();
+.setTimestamp();
 
-    channel.send({ embeds: [embed] });
-  });
+channel.send({ embeds: [embed] });
+
+});
+
+////////////////////////////////////////////////////
+//////////////////// BOOST /////////////////////////
+////////////////////////////////////////////////////
+
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+
+if (!oldMember.premiumSince && newMember.premiumSince) {
+
+const channel = newMember.guild.channels.cache.get(config.boostChannelId);
+if (!channel) return;
+
+const user = await newMember.user.fetch(true);
+
+const banner = user.bannerURL({ size: 1024 }) ||
+"https://media.discordapp.net/attachments/1048655323357771826/1114980924234819664/boost.gif";
+
+if (config.boostRoleId) {
+newMember.roles.add(config.boostRoleId).catch(() => {});
+}
+
+const embed = new EmbedBuilder()
+
+.setColor("#ff4dfc")
+
+.setAuthor({
+name: `${user.tag}`,
+iconURL: user.displayAvatarURL({ dynamic: true })
+})
+
+.setTitle("🚀 NOWY BOOST SERWERA!")
+
+.setDescription(
+`💜 **${newMember} właśnie zboostował serwer!**
+
+Dziękujemy za wsparcie naszej społeczności! 🔥`
+)
+
+.addFields(
+
+{
+name: "👤 Booster",
+value: `${newMember}`,
+inline: true
+},
+
+{
+name: "📅 Boost od",
+value: `<t:${Math.floor(newMember.premiumSinceTimestamp/1000)}:F>`,
+inline: true
+}
+
+)
+
+.setThumbnail(user.displayAvatarURL({ dynamic: true }))
+
+.setImage(banner)
+
+.setFooter({
+text: `Aktualny poziom boosta: ${newMember.guild.premiumTier}`,
+iconURL: newMember.guild.iconURL()
+})
+
+.setTimestamp();
+
+channel.send({ embeds: [embed] });
+
+}
+
+});
+
+////////////////////////////////////////////////////
+//////////////////// LEAVE /////////////////////////
+////////////////////////////////////////////////////
+
+client.on("guildMemberRemove", async (member) => {
+
+const channel = member.guild.channels.cache.get(config.leaveChannelId);
+if (!channel) return;
+
+const user = await member.user.fetch(true);
+
+const days = Math.floor(
+(Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24)
+);
+
+const embed = new EmbedBuilder()
+
+.setColor("#ff3b3b")
+
+.setAuthor({
+name: `${user.tag}`,
+iconURL: user.displayAvatarURL({ dynamic: true })
+})
+
+.setTitle("😢 Użytkownik opuścił serwer")
+
+.setDescription(
+`🚪 **${member.user.tag}** opuścił serwer.
+
+Spędził z nami **${days} dni**`
+)
+
+.addFields(
+
+{
+name: "🆔 ID",
+value: `${user.id}`,
+inline: true
+},
+
+{
+name: "📥 Dołączył",
+value: `<t:${Math.floor(member.joinedTimestamp/1000)}:F>`,
+inline: true
+}
+
+)
+
+.setThumbnail(user.displayAvatarURL({ dynamic: true }))
+
+.setFooter({
+text: `Pozostało ${member.guild.memberCount} członków`,
+iconURL: member.guild.iconURL()
+})
+
+.setTimestamp();
+
+channel.send({ embeds: [embed] });
+
+});
 
 };
