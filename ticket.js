@@ -5,36 +5,24 @@ StringSelectMenuBuilder,
 ButtonBuilder,
 ButtonStyle,
 ChannelType,
-PermissionsBitField,
-SlashCommandBuilder
+PermissionsBitField
 } = require("discord.js");
 
 const config = require("./config");
 
 module.exports = (client) => {
 
-client.once("ready", async () => {
+const prefix = "!";
 
-const command = new SlashCommandBuilder()
-.setName("ticket")
-.setDescription("System ticketów")
-.addSubcommand(sub =>
-sub
-.setName("create")
-.setDescription("stwórz panel ticketów")
-);
+client.on("messageCreate", async (message) => {
 
-await client.application.commands.create(command);
+if (message.author.bot) return;
+if (!message.content.startsWith(prefix)) return;
 
-});
+const args = message.content.slice(prefix.length).trim().split(/ +/);
+const command = args.shift().toLowerCase();
 
-client.on("interactionCreate", async (interaction) => {
-
-if (interaction.isChatInputCommand()) {
-
-if (interaction.commandName === "ticket") {
-
-if (interaction.options.getSubcommand() === "create") {
+if (command !== "ticket") return;
 
 const embed = new EmbedBuilder()
 .setColor("#2B2D31")
@@ -61,16 +49,14 @@ value: "pomoc"
 
 const row = new ActionRowBuilder().addComponents(menu);
 
-interaction.reply({
+message.channel.send({
 embeds: [embed],
 components: [row]
 });
 
-}
+});
 
-}
-
-}
+client.on("interactionCreate", async (interaction) => {
 
 if (interaction.isStringSelectMenu()) {
 
