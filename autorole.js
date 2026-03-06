@@ -1,17 +1,26 @@
 module.exports = (client) => {
     client.on("guildMemberAdd", async (member) => {
 
-        const roleId = "1473027948553568266";
+        const giveRole = "1473027948553568266";
+        const removeRole = "1475491258289094759";
 
         try {
-            const role = member.guild.roles.cache.get(roleId);
-            if (!role) return;
 
-            await member.roles.add(role);
-            console.log(`Nadano rolę ${role.name} użytkownikowi ${member.user.tag}`);
+            const roleToGive = member.guild.roles.cache.get(giveRole);
+            const roleToRemove = member.guild.roles.cache.get(removeRole);
+
+            if (roleToGive) {
+                await member.roles.add(roleToGive);
+                console.log(`Dodano rolę ${roleToGive.name} dla ${member.user.tag}`);
+            }
+
+            if (roleToRemove && member.roles.cache.has(removeRole)) {
+                await member.roles.remove(roleToRemove);
+                console.log(`Usunięto rolę ${roleToRemove.name} dla ${member.user.tag}`);
+            }
 
         } catch (err) {
-            console.error("Błąd przy nadawaniu roli:", err);
+            console.error("Błąd autorole:", err);
         }
 
     });
