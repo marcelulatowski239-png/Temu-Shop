@@ -1,331 +1,219 @@
 const {
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    ChannelType,
-    PermissionsBitField,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle
+EmbedBuilder,
+ActionRowBuilder,
+StringSelectMenuBuilder,
+ButtonBuilder,
+ButtonStyle,
+ChannelType,
+PermissionsBitField,
+SlashCommandBuilder
 } = require("discord.js");
 
 const config = require("./config");
 
 module.exports = (client) => {
 
-    const { prefix, ticketCategoryId, staffRoleId, logChannelId, sellers } = config;
+client.once("ready", async () => {
 
-    // ================= PANEL =================
-    client.on("messageCreate", async (message) => {
-        if (!message.guild || message.author.bot) return;
+const command = new SlashCommandBuilder()
+.setName("ticket")
+.setDescription("System ticketów")
+.addSubcommand(sub =>
+sub
+.setName("create")
+.setDescription("stwórz panel ticketów")
+);
 
-        if (message.content.toLowerCase() === `${prefix}ticket`) {
+await client.application.commands.create(command);
 
-            const embed = new EmbedBuilder()
-                .setColor("#FF6A00")
-                .setTitle("🎫 TemuShop • System Ticketów")
-                .setDescription(
-                    "Wybierz kategorię:\n\n" +
-                    "🛒 Zakup\n" +
-                    "💰 Skup\n" +
-                    "🆘 Pomoc\n" +
-                    "🤝 MM"
-                )
-                .setFooter({ text: "TemuShop • Premium Support" })
-                .setTimestamp();
+});
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("zakup")
-                    .setLabel("🛒 Zakup")
-                    .setStyle(ButtonStyle.Primary),
+client.on("interactionCreate", async (interaction) => {
 
-                new ButtonBuilder()
-                    .setCustomId("skup")
-                    .setLabel("💰 Skup")
-                    .setStyle(ButtonStyle.Success),
+if (interaction.isChatInputCommand()) {
 
-                new ButtonBuilder()
-                    .setCustomId("pomoc")
-                    .setLabel("🆘 Pomoc")
-                    .setStyle(ButtonStyle.Secondary),
+if (interaction.commandName === "ticket") {
 
-                new ButtonBuilder()
-                    .setCustomId("mm")
-                    .setLabel("🤝 MM")
-                    .setStyle(ButtonStyle.Danger)
-            );
+if (interaction.options.getSubcommand() === "create") {
 
-            message.channel.send({ embeds: [embed], components: [row] });
-        }
-    });
+const embed = new EmbedBuilder()
+.setColor("#2B2D31")
+.setTitle("🎫 System Ticketów")
+.setDescription("Wybierz kategorię aby otworzyć ticket");
 
-    // ================= INTERAKCJE =================
-    client.on("interactionCreate", async (interaction) => {
+const menu = new StringSelectMenuBuilder()
+.setCustomId("ticket_select")
+.setPlaceholder("📩 Wybierz kategorię")
+.addOptions([
+{
+label: "Złóż zamówienie",
+description: "Kup coś w naszym sklepie",
+emoji: "❤️",
+value: "zakup"
+},
+{
+label: "Pomoc",
+description: "Potrzebujesz pomocy",
+emoji: "🆘",
+value: "pomoc"
+}
+]);
 
-        // ===== WYBÓR SPRZEDAWCY =====
-        if (interaction.isButton() && interaction.customId === "zakup") {
+const row = new ActionRowBuilder().addComponents(menu);
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("zakup_marcel")
-                    .setLabel("marcelpro1")
-                    .setStyle(ButtonStyle.Primary),
+interaction.reply({
+embeds: [embed],
+components: [row]
+});
 
-                new ButtonBuilder()
-                    .setCustomId("zakup_pingwin")
-                    .setLabel("Pingwin5774")
-                    .setStyle(ButtonStyle.Success),
+}
 
-                new ButtonBuilder()
-                    .setCustomId("zakup_keksiak")
-                    .setLabel("keksiak2115_")
-                    .setStyle(ButtonStyle.Secondary)
-            );
+}
 
-            return interaction.reply({
-                content: "🛒 Wybierz sprzedawcę:",
-                components: [row],
-                ephemeral: true
-            });
-        }
+}
 
-        // ===== TWORZENIE ZAKUP =====
-        if (interaction.isButton() && interaction.customId.startsWith("zakup_")) {
+if (interaction.isStringSelectMenu()) {
 
-            const { guild, user } = interaction;
+if (interaction.customId === "ticket_select") {
 
-            const existing = guild.channels.cache.find(c => c.name.includes(user.id));
-            if (existing) {
-                return interaction.reply({
-                    content: "❌ Masz już otwarty ticket!",
-                    ephemeral: true
-                });
-            }
+const choice = interaction.values[0];
 
-            let sellerName = "";
-            let sellerId = "";
+if (choice === "zakup") {
 
-            if (interaction.customId === "zakup_marcel") {
-                sellerName = "marcelpro1";
-                sellerId = sellers.marcel;
-            }
+const menu = new StringSelectMenuBuilder()
+.setCustomId("seller_select")
+.setPlaceholder("🛒 Wybierz sprzedawcę")
+.addOptions([
+{
+label: config.sellers.marcel.name,
+value: "marcel"
+},
+{
+label: config.sellers.pingwin.name,
+value: "pingwin"
+},
+{
+label: config.sellers.keksiak.name,
+value: "keksiak"
+}
+]);
 
-            if (interaction.customId === "zakup_pingwin") {
-                sellerName = "Pingwin5774";
-                sellerId = sellers.pingwin;
-            }
+const row = new ActionRowBuilder().addComponents(menu);
 
-            if (interaction.customId === "zakup_keksiak") {
-                sellerName = "keksiak2115_";
-                sellerId = sellers.keksiak;
-            }
+interaction.reply({
+content: "Wybierz sprzedawcę",
+components: [row],
+ephemeral: true
+});
 
-            const channel = await guild.channels.create({
-                name: `zakup-${sellerName}-${user.id}`,
-                type: ChannelType.GuildText,
-                parent: ticketCategoryId,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: sellerId,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: sellers.marcel, // Marcel ma dostęp do wszystkich zakupów
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    }
-                ]
-            });
+}
 
-            const embed = new EmbedBuilder()
-                .setColor("#2B2D31")
-                .setTitle("🛒 Ticket Zakup")
-                .setDescription(
-                    `👤 Klient: ${user}\n` +
-                    `🛍 Sprzedawca: **${sellerName}**\n\n` +
-                    `Opisz co chcesz kupić.`
-                )
-                .setTimestamp();
+}
 
-            const closeRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("close_ticket")
-                    .setLabel("🔒 Zamknij Ticket")
-                    .setStyle(ButtonStyle.Danger)
-            );
+}
 
-            await channel.send({
-                content: `${user} <@${sellerId}>`,
-                embeds: [embed],
-                components: [closeRow]
-            });
+if (interaction.isStringSelectMenu()) {
 
-            return interaction.reply({
-                content: `✅ Ticket utworzony: ${channel}`,
-                ephemeral: true
-            });
-        }
+if (interaction.customId === "seller_select") {
 
-        // ===== SKUP / POMOC / MM =====
-        if (interaction.isButton() && ["skup","pomoc","mm"].includes(interaction.customId)) {
+const sellerKey = interaction.values[0];
+const seller = config.sellers[sellerKey];
 
-            const { guild, user, customId } = interaction;
+const guild = interaction.guild;
+const user = interaction.user;
 
-            const existing = guild.channels.cache.find(c => c.name.includes(user.id));
-            if (existing) {
-                return interaction.reply({
-                    content: "❌ Masz już otwarty ticket!",
-                    ephemeral: true
-                });
-            }
+const existing = guild.channels.cache.find(c => c.name.includes(user.id));
 
-            const channel = await guild.channels.create({
-                name: `${customId}-${user.id}`,
-                type: ChannelType.GuildText,
-                parent: ticketCategoryId,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    },
-                    {
-                        id: staffRoleId,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages
-                        ]
-                    }
-                ]
-            });
+if (existing) {
 
-            const embed = new EmbedBuilder()
-                .setColor("#2B2D31")
-                .setTitle(`📩 Ticket ${customId}`)
-                .setDescription(`Witaj ${user}\n\nOpisz swoją sprawę.`)
-                .setTimestamp();
+return interaction.reply({
+content: "Masz już otwarty ticket",
+ephemeral: true
+});
 
-            const closeRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("close_ticket")
-                    .setLabel("🔒 Zamknij Ticket")
-                    .setStyle(ButtonStyle.Danger)
-            );
+}
 
-            await channel.send({
-                content: `${user} <@&${staffRoleId}>`,
-                embeds: [embed],
-                components: [closeRow]
-            });
+const channel = await guild.channels.create({
 
-            return interaction.reply({
-                content: `✅ Ticket utworzony: ${channel}`,
-                ephemeral: true
-            });
-        }
+name: `ticket-${sellerKey}-${user.username}`,
 
-        // ===== ZAMYKANIE =====
-        if (interaction.isButton() && interaction.customId === "close_ticket") {
+type: ChannelType.GuildText,
 
-            const modal = new ModalBuilder()
-                .setCustomId("close_reason_modal")
-                .setTitle("Powód zamknięcia");
+parent: config.ticketCategoryId,
 
-            const input = new TextInputBuilder()
-                .setCustomId("reason")
-                .setLabel("Podaj powód zamknięcia")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true);
+permissionOverwrites: [
 
-            modal.addComponents(new ActionRowBuilder().addComponents(input));
-            return interaction.showModal(modal);
-        }
+{
+id: guild.roles.everyone,
+deny: [PermissionsBitField.Flags.ViewChannel]
+},
 
-        // ===== PO MODALU =====
-        if (interaction.isModalSubmit() && interaction.customId === "close_reason_modal") {
+{
+id: user.id,
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+},
 
-            const reason = interaction.fields.getTextInputValue("reason");
-            const channel = interaction.channel;
-            const guild = interaction.guild;
+{
+id: seller.id,
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+},
 
-            const userId = channel.name.split("-").pop();
-            const ticketOwner = await client.users.fetch(userId).catch(() => null);
+{
+id: config.ownerId,
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+}
 
-            // USUŃ WSZYSTKIE PRZYCISKI
-            const messages = await channel.messages.fetch({ limit: 50 });
-            for (const msg of messages.values()) {
-                if (msg.components.length > 0) {
-                    await msg.edit({ components: [] }).catch(() => {});
-                }
-            }
+]
 
-            // DM
-            if (ticketOwner) {
-                ticketOwner.send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setColor("#E74C3C")
-                            .setTitle("🔒 Twój ticket został zamknięty")
-                            .setDescription(
-                                `📌 Serwer: ${guild.name}\n` +
-                                `👮 Zamknięty przez: ${interaction.user}\n\n` +
-                                `📝 Powód:\n${reason}`
-                            )
-                            .setTimestamp()
-                    ]
-                }).catch(() => {});
-            }
+});
 
-            // LOG
-            const logChannel = guild.channels.cache.get(logChannelId);
-            if (logChannel) {
-                logChannel.send({
-                    embeds: [
-                        new EmbedBuilder()
-                            .setColor("#E74C3C")
-                            .setTitle("🔒 Ticket Zamknięty")
-                            .setDescription(
-                                `🎫 ${channel.name}\n` +
-                                `👮 ${interaction.user}\n\n` +
-                                `📝 ${reason}`
-                            )
-                            .setTimestamp()
-                    ]
-                });
-            }
+const embed = new EmbedBuilder()
+.setColor("#2B2D31")
+.setTitle("🎫 Ticket")
+.setDescription(`Witaj ${user}\nSprzedawca: <@${seller.id}>`)
+.setTimestamp();
 
-            await interaction.reply({
-                content: "🔒 Ticket zamknięty. Usuwanie za 3 sekundy...",
-                ephemeral: true
-            });
+const closeButton = new ButtonBuilder()
+.setCustomId("close_ticket")
+.setLabel("Zamknij Ticket")
+.setStyle(ButtonStyle.Danger);
 
-            setTimeout(() => {
-                channel.delete().catch(() => {});
-            }, 3000);
-        }
-    });
+const row = new ActionRowBuilder().addComponents(closeButton);
+
+await channel.send({
+content: `${user} <@${seller.id}>`,
+embeds: [embed],
+components: [row]
+});
+
+interaction.reply({
+content: `Ticket utworzony: ${channel}`,
+ephemeral: true
+});
+
+}
+
+}
+
+if (interaction.isButton()) {
+
+if (interaction.customId === "close_ticket") {
+
+interaction.channel.delete();
+
+}
+
+}
+
+});
+
 };
