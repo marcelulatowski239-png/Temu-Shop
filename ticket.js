@@ -14,145 +14,120 @@ module.exports = (client) => {
 
 const prefix = "!";
 
-client.on("messageCreate", async (message) => {
+////////////////////////////////////////////////////
+//////////////// PANEL TICKET //////////////////////
+////////////////////////////////////////////////////
 
-if (message.author.bot) return;
-if (!message.content.startsWith(prefix)) return;
+client.on("messageCreate", async message => {
 
-const args = message.content.slice(prefix.length).trim().split(/ +/);
+if(message.author.bot) return;
+
+if(!message.content.startsWith(prefix)) return;
+
+const args = message.content.slice(prefix.length).split(" ");
 const command = args.shift().toLowerCase();
 
-if (command !== "ticket") return;
+if(command !== "ticket") return;
 
 const embed = new EmbedBuilder()
+
 .setColor("#2B2D31")
 .setTitle("🎫 System Ticketów")
-.setDescription("Wybierz kategorię aby otworzyć ticket");
+.setDescription("Wybierz kategorię aby otworzyć ticket")
+.setFooter({text:"Ticket System"})
+.setTimestamp();
+
+const options = Object.entries(config.tickets).map(([key,data]) => ({
+
+label: data.label,
+description: data.description,
+emoji: data.emoji,
+value: key
+
+}));
 
 const menu = new StringSelectMenuBuilder()
+
 .setCustomId("ticket_select")
 .setPlaceholder("📩 Wybierz kategorię")
-.addOptions([
-{
-label: "Złóż zamówienie",
-description: "Kup coś w naszym sklepie",
-emoji: "❤️",
-value: "zakup"
-},
-{
-label: "Pomoc",
-description: "Potrzebujesz pomocy",
-emoji: "🆘",
-value: "pomoc"
-}
-]);
+.addOptions(options);
 
 const row = new ActionRowBuilder().addComponents(menu);
 
 message.channel.send({
-embeds: [embed],
-components: [row]
-});
+
+embeds:[embed],
+components:[row]
 
 });
 
-client.on("interactionCreate", async (interaction) => {
-
-if (interaction.isStringSelectMenu()) {
-
-if (interaction.customId === "ticket_select") {
-
-const choice = interaction.values[0];
-
-if (choice === "zakup") {
-
-const menu = new StringSelectMenuBuilder()
-.setCustomId("seller_select")
-.setPlaceholder("🛒 Wybierz sprzedawcę")
-.addOptions([
-{
-label: config.sellers.marcel.name,
-value: "marcel"
-},
-{
-label: config.sellers.pingwin.name,
-value: "pingwin"
-},
-{
-label: config.sellers.keksiak.name,
-value: "keksiak"
-}
-]);
-
-const row = new ActionRowBuilder().addComponents(menu);
-
-interaction.reply({
-content: "Wybierz sprzedawcę",
-components: [row],
-ephemeral: true
 });
 
-}
+////////////////////////////////////////////////////
+////////////// TWORZENIE TICKETÓW //////////////////
+////////////////////////////////////////////////////
 
-}
+client.on("interactionCreate", async interaction => {
 
-}
+if(!interaction.isStringSelectMenu()) return;
 
-if (interaction.isStringSelectMenu()) {
+if(interaction.customId !== "ticket_select") return;
 
-if (interaction.customId === "seller_select") {
-
-const sellerKey = interaction.values[0];
-const seller = config.sellers[sellerKey];
+const ticketType = interaction.values[0];
+const data = config.tickets[ticketType];
 
 const guild = interaction.guild;
 const user = interaction.user;
 
-const existing = guild.channels.cache.find(c => c.name.includes(user.id));
+const existing = guild.channels.cache.find(c =>
+c.name.includes(user.id)
+);
 
-if (existing) {
+if(existing){
 
 return interaction.reply({
-content: "Masz już otwarty ticket",
-ephemeral: true
+
+content:"Masz już otwarty ticket",
+ephemeral:true
+
 });
 
 }
 
 const channel = await guild.channels.create({
 
-name: `ticket-${sellerKey}-${user.username}`,
+name:`ticket-${ticketType}-${user.username}`,
 
-type: ChannelType.GuildText,
+type:ChannelType.GuildText,
 
-parent: config.ticketCategoryId,
+parent:data.categoryId,
 
-permissionOverwrites: [
+permissionOverwrites:[
 
 {
-id: guild.roles.everyone,
-deny: [PermissionsBitField.Flags.ViewChannel]
+id:guild.roles.everyone,
+deny:[PermissionsBitField.Flags.ViewChannel]
 },
 
 {
-id: user.id,
-allow: [
+id:user.id,
+allow:[
 PermissionsBitField.Flags.ViewChannel,
 PermissionsBitField.Flags.SendMessages
 ]
 },
 
 {
-id: seller.id,
-allow: [
+id:data.staffId,
+allow:[
 PermissionsBitField.Flags.ViewChannel,
 PermissionsBitField.Flags.SendMessages
 ]
 },
 
 {
-id: config.ownerId,
-allow: [
+id:config.ownerId,
+allow:[
 PermissionsBitField.Flags.ViewChannel,
 PermissionsBitField.Flags.SendMessages
 ]
@@ -163,42 +138,155 @@ PermissionsBitField.Flags.SendMessages
 });
 
 const embed = new EmbedBuilder()
+
 .setColor("#2B2D31")
-.setTitle("🎫 Ticket")
-.setDescription(`Witaj ${user}\nSprzedawca: <@${seller.id}>`)
+.setTitle("🎫 Ticket utworzony")
+.setDescription(`Witaj ${user}
+
+Obsługa: <@${data.staffId}>
+
+Opisz swój problem.`)
 .setTimestamp();
 
+const claimButton = new ButtonBuilder()
+
+.setCustomId("claim_ticket")
+.setLabel("Claim")
+.setStyle(ButtonStyle.Success);
+
 const closeButton = new ButtonBuilder()
+
 .setCustomId("close_ticket")
-.setLabel("Zamknij Ticket")
+.setLabel("Close")
 .setStyle(ButtonStyle.Danger);
 
-const row = new ActionRowBuilder().addComponents(closeButton);
+const deleteButton = new ButtonBuilder()
+
+.setCustomId("delete_ticket")
+.setLabel("Delete")
+.setStyle(ButtonStyle.Secondary);
+
+const row = new ActionRowBuilder()
+
+.addComponents(claimButton,closeButton,deleteButton);
 
 await channel.send({
-content: `${user} <@${seller.id}>`,
-embeds: [embed],
-components: [row]
+
+content:`${user} <@${data.staffId}>`,
+embeds:[embed],
+components:[row]
+
 });
 
 interaction.reply({
-content: `Ticket utworzony: ${channel}`,
-ephemeral: true
+
+content:`Ticket utworzony: ${channel}`,
+ephemeral:true
+
 });
 
-}
+});
 
-}
+////////////////////////////////////////////////////
+//////////////////// CLAIM /////////////////////////
+////////////////////////////////////////////////////
 
-if (interaction.isButton()) {
+client.on("interactionCreate", async interaction => {
 
-if (interaction.customId === "close_ticket") {
+if(!interaction.isButton()) return;
+
+if(interaction.customId !== "claim_ticket") return;
+
+const embed = new EmbedBuilder()
+
+.setColor("Green")
+.setDescription(`Ticket przejęty przez ${interaction.user}`);
+
+interaction.channel.send({
+
+embeds:[embed]
+
+});
+
+interaction.reply({
+
+content:"Claimowałeś ticket",
+ephemeral:true
+
+});
+
+});
+
+////////////////////////////////////////////////////
+//////////////////// CLOSE /////////////////////////
+////////////////////////////////////////////////////
+
+client.on("interactionCreate", async interaction => {
+
+if(!interaction.isButton()) return;
+
+if(interaction.customId !== "close_ticket") return;
+
+const embed = new EmbedBuilder()
+
+.setColor("Red")
+.setTitle("Ticket zamknięty")
+.setDescription(`Ticket zamknięty przez ${interaction.user}
+
+Usunięcie za 5 sekund`);
+
+await interaction.channel.send({
+
+embeds:[embed]
+
+});
+
+setTimeout(() => {
 
 interaction.channel.delete();
 
-}
+},5000);
 
-}
+});
+
+////////////////////////////////////////////////////
+//////////////////// DELETE ////////////////////////
+////////////////////////////////////////////////////
+
+client.on("interactionCreate", async interaction => {
+
+if(!interaction.isButton()) return;
+
+if(interaction.customId !== "delete_ticket") return;
+
+interaction.channel.delete();
+
+});
+
+////////////////////////////////////////////////////
+//////////////////// LOGI //////////////////////////
+////////////////////////////////////////////////////
+
+client.on("channelDelete", async channel => {
+
+if(!channel.name.startsWith("ticket")) return;
+
+const logChannel = channel.guild.channels.cache.get(config.logChannelId);
+
+if(!logChannel) return;
+
+const embed = new EmbedBuilder()
+
+.setColor("Orange")
+.setTitle("Ticket usunięty")
+.setDescription(`Kanał: ${channel.name}`)
+.setTimestamp();
+
+logChannel.send({
+
+embeds:[embed]
+
+});
 
 });
 
