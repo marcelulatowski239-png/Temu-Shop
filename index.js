@@ -6,7 +6,7 @@ const welcomeleaveboost = require("./welcomeleaveboost");
 
 const voiceStats = require("./voiceStats");
 
-const autorole = require("./autorole");
+const antiPornGif = require("./antiporngif");
 
 const antilink = require("./antilink");
 
@@ -39,7 +39,7 @@ const client = new Client({
   ]
 });
 
-autorole(client);
+antiPornGif(client);
 antispam(client);
 antilink(client);
 voiceStats(client);
