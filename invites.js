@@ -4,7 +4,7 @@ const { EmbedBuilder } = require('discord.js');
 const invitesResetMemory = new Map();
 
 // Kanał, w którym zwykli użytkownicy mogą sprawdzać zaproszenia
-const INVITES_CHANNEL_ID = 'TU_WSTAW_ID_KANAŁU'; // np. '123456789012345678'
+const INVITES_CHANNEL_ID = '1472956274973999211';
 
 module.exports = (client) => {
     client.on('messageCreate', async (message) => {
