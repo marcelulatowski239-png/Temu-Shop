@@ -18,6 +18,8 @@ const stats = require("./stats");
 
 const levels = require("./level");
 
+const invites = require("./invites");
+
 const glosowanie = require("./glosowanie");
 
 const rep = require("./rep");
@@ -36,9 +38,11 @@ GatewayIntentBits.GuildMessages,
 GatewayIntentBits.MessageContent,
 GatewayIntentBits.GuildMembers,
 GatewayIntentBits.GuildModeration,
+GatewayIntentBits.GuildInvites
 ]
 });
 
+invites(client);
 antiPornGif(client);
 antispam(client);
 antilink(client);
