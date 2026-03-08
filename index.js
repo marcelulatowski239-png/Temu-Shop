@@ -18,6 +18,8 @@ const stats = require("./stats");
 
 const levels = require("./level");
 
+const antisprzedam = require("./antisprzedam");
+
 const invites = require("./invites");
 
 const glosowanie = require("./glosowanie");
@@ -42,6 +44,7 @@ GatewayIntentBits.GuildInvites
 ]
 });
 
+antisprzedam(client);
 invites(client);
 antiPornGif(client);
 antispam(client);
