@@ -1,7 +1,5 @@
 const help = require("./help");
 
-const invites = require("./invites");
-
 const logs = require("./logs"); 
 
 const welcomeleaveboost = require("./welcomeleaveboost");
@@ -38,11 +36,9 @@ GatewayIntentBits.GuildMessages,
 GatewayIntentBits.MessageContent,
 GatewayIntentBits.GuildMembers,
 GatewayIntentBits.GuildModeration,
-GatewayIntentBits.GuildInvites
 ]
 });
 
-invites(client);
 antiPornGif(client);
 antispam(client);
 antilink(client);
