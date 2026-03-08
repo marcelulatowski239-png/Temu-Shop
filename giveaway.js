@@ -7,8 +7,7 @@ const {
   ComponentType,
 } = require("discord.js");
 
-// Ustaw ID kanału dla giveaway (jeśli chcesz, aby admini mogli wszędzie, usuń sprawdzenie w kodzie)
-const GIVEAWAY_CHANNEL_ID = "TU_WSTAW_ID_KANALU"; 
+const GIVEAWAY_CHANNEL_ID = "1472956274613157919"; 
 
 const activeGiveaways = new Map();
 const endedGiveaways = new Map();
