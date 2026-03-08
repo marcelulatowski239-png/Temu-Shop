@@ -1,48 +1,59 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder } = require('discord.js');
 
-module.exports = (client) => {
-  client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
-    if (!message.guild) return;
+// Pamięć zaproszeń do resetowania (tylko dla tego procesu bota)
+const invitesResetMemory = new Map();
 
-    const PREFIX = "!";
-    if (!message.content.startsWith(PREFIX)) return;
+module.exports = {
+    name: 'invites',
+    description: 'Sprawdza lub resetuje zaproszenia użytkownika',
 
-    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-    const cmd = args.shift().toLowerCase();
+    async execute(message, args) {
+        try {
+            const targetMember = message.mentions.members?.first() || message.member;
 
-    // ================= KOMENDA !INVITES =================
-    if (cmd === "invites") {
-      try {
-        const targetMember = message.mentions.members.first() || message.member;
+            // Sprawdzenie czy chcemy resetować
+            if (args[0] && args[0].toLowerCase() === 'reset') {
+                // Tylko właściciel lub admin
+                if (!message.member.permissions.has('Administrator')) {
+                    return message.reply('❌ Nie masz permisji do resetowania zaproszeń.');
+                }
 
-        // Pobranie wszystkich zaproszeń na serwer
-        const allInvites = await message.guild.invites.fetch();
+                invitesResetMemory.set(targetMember.id, 0);
+                return message.reply(`♻️ Liczba zaproszeń użytkownika ${targetMember} została zresetowana.`);
+            }
 
-        // Filtrujemy zaproszenia utworzone przez targetMember
-        const userInvites = allInvites.filter(i => i.inviter && i.inviter.id === targetMember.id);
+            // Pobranie wszystkich zaproszeń serwera
+            const allInvites = await message.guild.invites.fetch();
 
-        let inviteCount = 0;
-        userInvites.forEach(invite => {
-          inviteCount += invite.uses;
-        });
+            // Filtrujemy zaproszenia utworzone przez targetMember
+            const userInvites = allInvites.filter(i => i.inviter && i.inviter.id === targetMember.id);
 
-        const embed = new EmbedBuilder()
-          .setColor("#5865F2")
-          .setTitle("📨 Statystyki zaproszeń")
-          .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
-          .addFields(
-            { name: "Użytkownik", value: `${targetMember}`, inline: true },
-            { name: "Zaproszenia", value: `**${inviteCount}**`, inline: true }
-          )
-          .setFooter({ text: `Sprawdzone przez ${message.author.username}` })
-          .setTimestamp();
+            let inviteCount = 0;
+            userInvites.forEach(invite => {
+                inviteCount += invite.uses;
+            });
 
-        return message.reply({ embeds: [embed] });
-      } catch (err) {
-        console.error("Błąd komendy !invites:", err);
-        return message.reply("❌ Wystąpił błąd podczas pobierania zaproszeń.");
-      }
+            // Uwzględniamy resetowaną wartość, jeśli jest w pamięci
+            if (invitesResetMemory.has(targetMember.id)) {
+                inviteCount = invitesResetMemory.get(targetMember.id);
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor('#5865F2')
+                .setTitle('📨 Statystyki zaproszeń')
+                .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: 'Użytkownik', value: `${targetMember}`, inline: true },
+                    { name: 'Zaproszenia', value: `**${inviteCount}**`, inline: true }
+                )
+                .setFooter({ text: `Sprawdzone przez ${message.author.username}` })
+                .setTimestamp();
+
+            message.reply({ embeds: [embed] });
+
+        } catch (err) {
+            console.error('Błąd komendy !invites:', err);
+            message.reply('❌ Wystąpił błąd podczas pobierania zaproszeń.');
+        }
     }
-  });
 };
