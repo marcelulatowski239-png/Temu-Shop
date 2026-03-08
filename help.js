@@ -90,7 +90,7 @@ module.exports = {
                         .setDescription(
                             '```' +
                             '!profil\n' +
-                            '!rep @user\n' +
+                            '+rep @user\n' +
                             '!level\n' +
                             '!rank\n' +
                             '!top' +
@@ -106,7 +106,7 @@ module.exports = {
                             '```' +
                             '!verify\n' +
                             '!ticket\n' +
-                            '!rep @user produkt cena metoda' +
+                            '+rep @user produkt cena metoda' +
                             '```'
                         );
                     break;
@@ -118,7 +118,7 @@ module.exports = {
                         .setDescription(
                             '```' +
                             '!giveaway\n' +
-                            '!glosowanie' +
+                            '+glosowanie' +
                             '```'
                         );
                     break;
