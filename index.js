@@ -1,5 +1,7 @@
 const help = require("./help");
 
+const invites = require("./invites");
+
 const logs = require("./logs"); 
 
 const welcomeleaveboost = require("./welcomeleaveboost");
@@ -31,14 +33,16 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildModeration
-  ]
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent,
+GatewayIntentBits.GuildMembers,
+GatewayIntentBits.GuildModeration,
+GatewayIntentBits.GuildInvites
+]
 });
 
+invites(client);
 antiPornGif(client);
 antispam(client);
 antilink(client);
