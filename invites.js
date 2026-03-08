@@ -1,7 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
 
-// Pamięć zaproszeń do resetowania (tylko dla tego procesu bota)
+// Pamięć do resetu zaproszeń (tylko w pamięci)
 const invitesResetMemory = new Map();
+
+// ID kanału, na którym normalni użytkownicy mogą sprawdzać zaproszenia
+const INVITES_CHANNEL_ID = 'TU_WSTAW_ID_KANAŁU'; // np. '123456789012345678'
 
 module.exports = {
     name: 'invites',
@@ -11,29 +14,30 @@ module.exports = {
         try {
             const targetMember = message.mentions.members?.first() || message.member;
 
-            // Sprawdzenie czy chcemy resetować
+            // Sprawdzenie uprawnień / kanału
+            const isAdmin = message.member.permissions.has('Administrator');
+            if (!isAdmin && message.channel.id !== INVITES_CHANNEL_ID) {
+                return message.reply(`❌ Komenda !invites może być używana tylko w <#${INVITES_CHANNEL_ID}>`);
+            }
+
+            // ================= RESET =================
             if (args[0] && args[0].toLowerCase() === 'reset') {
-                // Tylko właściciel lub admin
-                if (!message.member.permissions.has('Administrator')) {
-                    return message.reply('❌ Nie masz permisji do resetowania zaproszeń.');
+                if (!isAdmin) {
+                    return message.reply('❌ Tylko administratorzy mogą resetować zaproszenia.');
                 }
 
                 invitesResetMemory.set(targetMember.id, 0);
                 return message.reply(`♻️ Liczba zaproszeń użytkownika ${targetMember} została zresetowana.`);
             }
 
-            // Pobranie wszystkich zaproszeń serwera
+            // ================= POKAŻ ZAPROSZENIA =================
             const allInvites = await message.guild.invites.fetch();
-
-            // Filtrujemy zaproszenia utworzone przez targetMember
             const userInvites = allInvites.filter(i => i.inviter && i.inviter.id === targetMember.id);
 
             let inviteCount = 0;
-            userInvites.forEach(invite => {
-                inviteCount += invite.uses;
-            });
+            userInvites.forEach(invite => inviteCount += invite.uses);
 
-            // Uwzględniamy resetowaną wartość, jeśli jest w pamięci
+            // Uwzględniamy resetowaną wartość
             if (invitesResetMemory.has(targetMember.id)) {
                 inviteCount = invitesResetMemory.get(targetMember.id);
             }
