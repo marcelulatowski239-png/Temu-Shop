@@ -14,7 +14,6 @@ const activeGiveaways = new Map();
 const MIN_DURATION = 60 * 1000;
 const MAX_DURATION = 10 * 24 * 60 * 60 * 1000;
 const MAX_WINNERS = 50;
-const WINNER_CONFIRM_TIME = 60 * 1000; // 60 sekund na potwierdzenie wygranej
 
 const timeUnits = {
   s: 1000,
@@ -151,76 +150,38 @@ module.exports = (client) => {
     });
 
     collector.on("end", async () => {
-      await endGiveaway(giveawayMessage, participants, prize, winners, message);
-    });
-
-    // Funkcja zakończenia z reroll
-    async function endGiveaway(msg, participantsSet, prize, winnersCount, originalMessage) {
-      let users = Array.from(participantsSet);
+      const users = Array.from(participants);
 
       if (users.length === 0) {
-        await msg.edit({ components: [] });
-        return originalMessage.channel.send(
+        await giveawayMessage.edit({ components: [] });
+        return message.channel.send(
           "❌ Giveaway zakończony — brak uczestników."
         );
       }
 
-      const winnersList = pickRandom(users, winnersCount);
-
-      // Potwierdzenie zwycięzców
-      const confirmedWinners = [];
-
-      for (const winnerId of winnersList) {
-        const user = await client.users.fetch(winnerId);
-
-        // Wysyłamy DM do zwycięzcy
-        try {
-          const dm = await user.send(
-            `🎉 Wygrałeś giveaway: **${prize}**!\n` +
-              `Masz ${WINNER_CONFIRM_TIME / 1000} sekund aby potwierdzić udział, inaczej wybierzemy inną osobę.`
-          );
-
-          const filter = (m) => m.author.id === winnerId;
-          const collected = await dm.channel.awaitMessages({
-            filter,
-            max: 1,
-            time: WINNER_CONFIRM_TIME,
-            errors: ["time"],
-          });
-
-          confirmedWinners.push(`<@${winnerId}>`);
-        } catch (err) {
-          // Reroll jeśli brak odpowiedzi
-          const remainingUsers = users.filter((id) => !winnersList.includes(id));
-          if (remainingUsers.length > 0) {
-            const newWinnerId = pickRandom(remainingUsers, 1)[0];
-            confirmedWinners.push(`<@${newWinnerId}>`);
-          } else {
-            // brak użytkowników → pomijamy
-          }
-        }
-      }
+      const winnersList = pickRandom(users, winners).map((id) => `<@${id}>`);
 
       const endedEmbed = new EmbedBuilder()
         .setTitle("🎉 GIVEAWAY ZAKOŃCZONY 🎉")
         .setColor("Green")
         .setDescription(
           `🎁 **Nagroda:** ${prize}\n` +
-            `👑 **Zwycięzcy:** ${confirmedWinners.join(", ")}\n` +
+            `👑 **Zwycięzcy:** ${winnersList.join(", ")}\n` +
             `👥 **Uczestników:** ${users.length}`
         )
         .setTimestamp();
 
-      await msg.edit({
+      await giveawayMessage.edit({
         embeds: [endedEmbed],
         components: [],
       });
 
-      originalMessage.channel.send(
-        `🎉 Gratulacje ${confirmedWinners.join(", ")}!\nWygraliście **${prize}**!`
+      // ✅ OGŁOSZENIE zwycięzców na kanale giveaway
+      message.channel.send(
+        `🎉 Gratulacje ${winnersList.join(", ")}!\nWygraliście **${prize}**!`
       );
 
-      activeGiveaways.delete(msg.id);
-    }
+      activeGiveaways.delete(giveawayMessage.id);
+    });
   });
 };
