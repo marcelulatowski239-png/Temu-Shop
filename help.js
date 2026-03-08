@@ -28,7 +28,7 @@ module.exports = {
             .addOptions([
                 {
                     label: 'Komendy Klienta',
-                    description: 'Profil, level, reputacja',
+                    description: 'Profil, level, reputacja, invites',
                     value: 'user',
                     emoji: '👤'
                 },
@@ -93,7 +93,8 @@ module.exports = {
                             '+rep @user\n' +
                             '!level\n' +
                             '!rank\n' +
-                            '!top' +
+                            '!top\n' +
+                            '!invites' +
                             '```'
                         );
                     break;
