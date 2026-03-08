@@ -40,7 +40,7 @@ module.exports = {
                 },
                 {
                     label: 'Eventy',
-                    description: 'Giveaway i głosowania',
+                    description: 'Giveaway, głosowania i reroll',
                     value: 'event',
                     emoji: '🎉'
                 },
@@ -119,6 +119,7 @@ module.exports = {
                         .setDescription(
                             '```' +
                             '!giveaway\n' +
+                            '!reroll\n' +
                             '+glosowanie' +
                             '```'
                         );
